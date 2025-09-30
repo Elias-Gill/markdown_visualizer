@@ -35,20 +35,20 @@ FetchContent_MakeAvailable(raylib)
 # ============================================================================
 
 # Archivos fuente principales
+file(GLOB_RECURSE SRC_FILES "src/*.c") # listar ".c" recursivamente en 'src'
 add_executable(md_reader 
-    main.c
-    parser.c
+    ${SRC_FILES} 
     include/md4c/md4c.c
 )
 
-# Directorios de include
+# Directorios de include (donde buscar .h)
 target_include_directories(md_reader PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/clay
     ${CMAKE_CURRENT_SOURCE_DIR}/include/md4c
 )
 
-# Enlazar librerías
+# Enlazar librerías al ejecutable
 target_link_libraries(md_reader PUBLIC raylib m)
 
 # ============================================================================
