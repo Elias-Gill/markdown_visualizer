@@ -1,0 +1,27 @@
+desc: (none)
+cmd: ./build/md_reader
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=1479042
+mem_heap_B=6073472
+mem_heap_extra_B=840
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=1682717
+mem_heap_B=6074496
+mem_heap_extra_B=848
+mem_stacks_B=0
+heap_tree=empty

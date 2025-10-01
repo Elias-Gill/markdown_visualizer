@@ -29,21 +29,21 @@ int text_callback(MD_TEXTTYPE type, const MD_CHAR* text, MD_SIZE size, void* use
     size_t copy_size = (size < 255) ? size : 255;
     strncpy(temp, text, copy_size);
     temp[copy_size] = '\0';
-    
+
     printf("Texto [tipo:%d]: '%.*s'\n", type, (int)size, text);
     return 0;
 }
 
 int parse_something(void) {
     MD_PARSER parser = {
-        .abi_version = 0, 
+        .abi_version = 0,
         .flags = 0,
         .enter_block = enter_block_callback,
         .leave_block = leave_block_callback,
-        .enter_span = enter_span_callback,  
-        .leave_span = leave_span_callback,  
-        .text = text_callback,              
-        .debug_log = NULL, 
+        .enter_span = enter_span_callback,
+        .leave_span = leave_span_callback,
+        .text = text_callback,
+        .debug_log = NULL,
         .syntax = NULL
     };
 
