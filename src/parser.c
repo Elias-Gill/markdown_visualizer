@@ -2,121 +2,89 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-
 #include "parser.h"
 #include "md4c.h"
 
-/* Variables globales de la lista */
-static MarkdownNode *head = NULL;
-static MarkdownNode *tail = NULL;
+static MarkdownNode *root_node = NULL;
+static MarkdownNode *current_node = NULL;
 
-/* ------------------------------------------
- *  Linked List (queue)
- * ------------------------------------------ */
+// -------------------------------
+//  Node creation
+// -------------------------------
 
-MarkdownNode *create_node(NodeType type) {
+static MarkdownNode *create_node(NodeType type) {
     MarkdownNode *node = malloc(sizeof(MarkdownNode));
     if (!node) return NULL;
-
     memset(node, 0, sizeof(MarkdownNode));
     node->type = type;
-    node->next = NULL;
     return node;
 }
 
-MarkdownNode *insert_node(MarkdownNode *node) {
-    if (!node) return NULL;
-
-    if (head == NULL) {
-        head = tail = node;
+static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
+    if (!parent || !child) return;
+    child->parent = parent;
+    if (!parent->first_child) {
+        parent->first_child = child;
     } else {
-        tail->next = node;
-        tail = node;
+        MarkdownNode *s = parent->first_child;
+        while (s->next_sibling) s = s->next_sibling;
+        s->next_sibling = child;
     }
-    return node;
 }
 
-MarkdownNode *next_node(void) {
-    if (head == NULL) return NULL;
+// ------------------------------
+//  Callbacks de MD4C
+// ------------------------------
 
-    MarkdownNode *old_head = head;
-    head = head->next;
-    free(old_head);
-    return head;
-}
-
-void free_all_nodes(void) {
-    MarkdownNode *current = head;
-    while (current) {
-        MarkdownNode *next = current->next;
-        if (current->type == NODE_TEXT && current->value.text.text)
-            free(current->value.text.text);
-        free(current);
-        current = next;
-    }
-    head = tail = NULL;
-}
-
-/* ------------------------------------------
- *  Callbacks de MD4C
- * ------------------------------------------ */
-
-int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
+static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
     MarkdownNode *node = create_node(NODE_BLOCK);
     if (!node) return -1;
-
-    node->value.block.is_enter = true;
     node->value.block.type = type;
     node->value.block.detail = detail;
     node->value.block.userdata = userdata;
 
-    insert_node(node);
+    if (!root_node) root_node = node;
+    else insert_child_node(current_node, node);
+
+    current_node = node; // descendemos
     return 0;
 }
 
-int on_leave_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
-    MarkdownNode *node = create_node(NODE_BLOCK);
-    if (!node) return -1;
+static int on_leave_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
+    if (!current_node) return -1;
+    current_node->value.block.type = type;
+    current_node->value.block.detail = detail;
+    current_node->value.block.userdata = userdata;
 
-    node->value.block.is_enter = false;
-    node->value.block.type = type;
-    node->value.block.detail = detail;
-    node->value.block.userdata = userdata;
-
-    insert_node(node);
+    current_node = current_node->parent; // ascendemos
     return 0;
 }
 
-int on_enter_span(MD_SPANTYPE type, void *detail, void *userdata) {
+static int on_enter_span(MD_SPANTYPE type, void *detail, void *userdata) {
     MarkdownNode *node = create_node(NODE_SPAN);
     if (!node) return -1;
-
-    node->value.span.is_enter = true;
     node->value.span.type = type;
     node->value.span.detail = detail;
     node->value.span.userdata = userdata;
 
-    insert_node(node);
+    insert_child_node(current_node, node);
+    current_node = node;
     return 0;
 }
 
-int on_leave_span(MD_SPANTYPE type, void *detail, void *userdata) {
-    MarkdownNode *node = create_node(NODE_SPAN);
-    if (!node) return -1;
+static int on_leave_span(MD_SPANTYPE type, void *detail, void *userdata) {
+    if (!current_node) return -1;
+    current_node->value.span.type = type;
+    current_node->value.span.detail = detail;
+    current_node->value.span.userdata = userdata;
 
-    node->value.span.is_enter = false;
-    node->value.span.type = type;
-    node->value.span.detail = detail;
-    node->value.span.userdata = userdata;
-
-    insert_node(node);
+    current_node = current_node->parent;
     return 0;
 }
 
-int on_text(MD_TEXTTYPE type, const MD_CHAR *text, MD_SIZE size, void *userdata) {
+static int on_text(MD_TEXTTYPE type, const MD_CHAR *text, MD_SIZE size, void *userdata) {
     MarkdownNode *node = create_node(NODE_TEXT);
     if (!node) return -1;
-
     node->value.text.type = type;
     node->value.text.size = size;
     node->value.text.userdata = userdata;
@@ -126,16 +94,16 @@ int on_text(MD_TEXTTYPE type, const MD_CHAR *text, MD_SIZE size, void *userdata)
         free(node);
         return -1;
     }
-
     memcpy(node->value.text.text, text, size);
     node->value.text.text[size] = '\0';
-    insert_node(node);
+
+    insert_child_node(current_node, node);
     return 0;
 }
 
-/* ------------------------------------------
- *  Parser Markdown
- * ------------------------------------------ */
+// ------------------------------
+//  Parser Markdown
+// ------------------------------
 
 int parse_markdown(const char* text) {
     MD_SIZE size = strlen(text);
@@ -152,33 +120,75 @@ int parse_markdown(const char* text) {
         .syntax = NULL
     };
 
+    root_node = NULL;
+    current_node = NULL;
+
     return md_parse(text, size, &parser, NULL);
 }
 
-/* ------------------------------------------
- *  Helpers for debug
- * ------------------------------------------ */
+// ------------------------------
+//  Funciones de recorrido
+// ------------------------------
 
-void print_nodes(void) {
-    MarkdownNode *cur = head;
-    while (cur) {
-        switch (cur->type) {
+MarkdownNode *next_node(MarkdownNode *parent) {
+    if (!parent) return NULL;
+    return parent->first_child;
+}
+
+MarkdownNode *get_root_node(void) {
+    return root_node;
+}
+
+// ------------------------------
+//  Liberar memoria
+// ------------------------------
+
+void free_tree(MarkdownNode *node) {
+    if (!node) return;
+
+    // liberar hijos
+    MarkdownNode *child = node->first_child;
+    while (child) {
+        MarkdownNode *next = child->next_sibling;
+        free_tree(child);
+        child = next;
+    }
+
+    // liberar texto heap
+    if (node->type == NODE_TEXT && node->value.text.text) {
+        free(node->value.text.text);
+    }
+
+    free(node);
+}
+
+// ------------------------------
+//  Debug: imprimir árbol
+// ------------------------------
+
+void print_tree(const MarkdownNode *node, int indent) {
+    while (node) {
+        for (int i = 0; i < indent; i++) printf("\t");
+
+        switch (node->type) {
             case NODE_TEXT:
-                printf("[TEXT] type=%d, text='%s'\n",
-                       cur->value.text.type,
-                       cur->value.text.text ? cur->value.text.text : "(null)");
+                printf("[TEXT] type=%d, text='%s'\n", node->value.text.type,
+                       node->value.text.text ? node->value.text.text : "(null)");
                 break;
             case NODE_SPAN:
-                printf("[SPAN] %s type=%d\n",
-                       cur->value.span.is_enter ? "ENTER" : "LEAVE",
-                       cur->value.span.type);
+                printf("[SPAN] type=%d\n",
+                       node->value.span.type);
                 break;
             case NODE_BLOCK:
-                printf("[BLOCK] %s type=%d\n",
-                       cur->value.block.is_enter ? "ENTER" : "LEAVE",
-                       cur->value.block.type);
+                printf("[BLOCK] type=%d\n",
+                       node->value.block.type);
                 break;
         }
-        cur = cur->next;
+
+        if (node->first_child) {
+            print_tree(node->first_child, indent + 1);
+        }
+
+        node = node->next_sibling;
     }
 }

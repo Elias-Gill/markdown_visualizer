@@ -1,4 +1,5 @@
-El resultado del parseo exitoso[BLOCK] ENTER type=0
+Resultado del parseo exitoso
+[BLOCK] ENTER type=0
 [BLOCK] ENTER type=6
 [TEXT] type=0, text='Desarrollo movil Android'
 [BLOCK] LEAVE type=6

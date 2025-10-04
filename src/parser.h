@@ -1,3 +1,7 @@
+#ifndef MD4C_USE_UTF8
+#define MD4C_USE_UTF8
+#endif  //MD4C_USE_UTF8
+
 #ifndef PARSER_H
 #define PARSER_H
 
@@ -5,7 +9,7 @@
 #include <stdbool.h>
 
 // ------------------------------
-//  ENUMS and basic STRUCTS
+//  ENUMS y STRUCTS básicos
 // ------------------------------
 
 typedef enum {
@@ -22,36 +26,42 @@ typedef struct {
 } TextNode;
 
 typedef struct {
-    bool is_enter;          // true = enter_span, false = leave_span
     MD_SPANTYPE type;
     void *detail;           // pointer from MD4C (no ownership)
     void *userdata;
 } SpanNode;
 
 typedef struct {
-    bool is_enter;          // true = enter_block, false = leave_block
     MD_BLOCKTYPE type;
     void *detail;           // pointer from MD4C (no ownership)
     void *userdata;
 } BlockNode;
 
 // ------------------------------
-//  Linked List Types
+//  Nodo de árbol
 // ------------------------------
 
 typedef struct MarkdownNode {
     NodeType type;
-    struct MarkdownNode *next;
     union {
         TextNode text;
         SpanNode span;
         BlockNode block;
     } value;
+
+    struct MarkdownNode *parent;       // nodo padre
+    struct MarkdownNode *first_child;  // primer hijo
+    struct MarkdownNode *next_sibling; // siguiente hermano
 } MarkdownNode;
 
+// ------------------------------
+//  Funciones principales
+// ------------------------------
+
 int parse_markdown(const char* text);
-void print_nodes(void);
-void free_all_nodes(void);
-MarkdownNode *next_node(void);
+void free_tree(MarkdownNode *node);
+void print_tree(const MarkdownNode *node, int indent);
+MarkdownNode *next_node(MarkdownNode *parent); // devuelve el primer hijo
+MarkdownNode *get_root_node(void);             // devuelve la raíz del documento
 
 #endif // PARSER_H
