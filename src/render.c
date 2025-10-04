@@ -11,7 +11,7 @@
 // Color palette
 #define COLOR_ORANGE     (Clay_Color) {225, 138, 50, 255}
 #define COLOR_BLUE       (Clay_Color) {111, 173, 162, 255}
-#define COLOR_BACKGROUND (Clay_Color) {200, 200, 255, 255}
+#define COLOR_BACKGROUND (Clay_Color) {255, 255, 255, 255}
 
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
@@ -99,12 +99,31 @@ void RenderNode(MarkdownNode *cur_node) {
             case NODE_TEXT:
                 RenderText(node);
                 break;
+
             case NODE_SPAN:
-                // TODO: hacer un wrap de ese if con estilos
-                if (node->first_child) {
-                    RenderNode(node->first_child);
+                if (node->value.span.type == MD_SPAN_STRONG) {
+                    CLAY_AUTO_ID({
+                            .layout = {
+                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                            .padding = {16, 16, 16, 16},
+                            .childGap = 16,
+                            .sizing = { .width = CLAY_SIZING_GROW(0) }
+                            },
+                            .backgroundColor = COLOR_BLUE,
+                            .clip = {
+                            .vertical = true, .childOffset = (Clay_Vector2) {
+                            0,0
+                            }
+                            }
+                            }) {
+                        // TODO: hacer un wrap de ese if con estilos
+                        if (node->first_child) {
+                            RenderNode(node->first_child);
+                        }
+                    }
                 }
                 break;
+
             case NODE_BLOCK:
                 // TODO: hacer un wrap de ese if con estilos segun el tipo de nodo
                 if (node->first_child) {
