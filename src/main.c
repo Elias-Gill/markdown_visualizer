@@ -35,6 +35,7 @@ char* read_file(char *file_name) {
 int main(int argc, char *argv[]) {
     init_clay();
     parse_markdown(read_file("/home/elias/Descargas/test.md"));
+    print_tree(get_root_node(), 0);
 
     while(true){
         update_frame();

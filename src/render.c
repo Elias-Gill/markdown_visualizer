@@ -11,24 +11,36 @@
 // Color palette
 #define COLOR_ORANGE     (Clay_Color) {225, 138, 50, 255}
 #define COLOR_BLUE       (Clay_Color) {111, 173, 162, 255}
+#define COLOR_FOREGROUND (Clay_Color) {23, 23, 23, 255}
 #define COLOR_BACKGROUND (Clay_Color) {255, 255, 255, 255}
 
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
-
 #define MAIN_LAYOUT_ID "main_layout"
-bool g_debug_enabled = false;
+
+bool g_debug_enabled = true;
 
 // Fonts
 const uint32_t FONT_ID_BODY_16 = 1;
 const uint32_t FONT_ID_BODY_24 = 0;
 Font g_fonts[2];
 
+void render_node(MarkdownNode *current_node);
+
+// Current text mode (used to render different type of text)
+typedef enum {
+    _TEXT_BOLD,
+    _TEXT_ITALIC,
+    _TEXT_REGULAR
+} TextTypeMode;
+
+TextTypeMode curr_text_type_mode = _TEXT_REGULAR;
+
 // ============================================================================
 // INIT FUNCTIONS
 // ============================================================================
-void load_fonts() {
-    // prepare used fonts
+
+void load_fonts(void) {
     g_fonts[FONT_ID_BODY_24] = LoadFontEx("resources/Roboto-Regular.ttf", 48, 0, 400);
     SetTextureFilter(g_fonts[FONT_ID_BODY_24].texture, TEXTURE_FILTER_BILINEAR);
 
@@ -38,6 +50,7 @@ void load_fonts() {
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
 }
 
+// Handles Clay library errors and resizes buffers if needed
 void handle_clay_errors(Clay_ErrorData error_data) {
     printf("%s", error_data.errorText.chars);
     if (error_data.errorType == CLAY_ERROR_TYPE_ELEMENTS_CAPACITY_EXCEEDED) {
@@ -49,7 +62,7 @@ void handle_clay_errors(Clay_ErrorData error_data) {
     }
 }
 
-void init_clay() {
+void init_clay(void) {
     uint64_t total_memory_size = Clay_MinMemorySize();
     Clay_Arena clay_memory = Clay_CreateArenaWithCapacityAndMemory(total_memory_size,
                              malloc(total_memory_size));
@@ -71,71 +84,119 @@ void init_clay() {
 // REUSABLE COMPONENTS
 // ============================================================================
 
-static inline Clay_String make_clay_string(char *text, long length, bool heap_allocated) {
+// Creates a Clay_String from a C string
+static inline Clay_String make_clay_string(char *text, long length, bool is_heap_allocated) {
     return (Clay_String) {
-            .isStaticallyAllocated = !heap_allocated,
-            .length = length,
-            .chars = text,
+        .isStaticallyAllocated = !is_heap_allocated,
+        .length = length,
+        .chars = text,
     };
 }
 
-void RenderText(MarkdownNode *node) {
+// Renders a text node with appropriate styling
+void render_text(MarkdownNode *node) {
     TextNode cast_node_value = node->value.text;
 
+    // Ignore soft brakes ('\n')
+    if (cast_node_value.type == MD_TEXT_SOFTBR) {
+        return;
+    }
+
     Clay_String text = make_clay_string(cast_node_value.text, cast_node_value.size, true);
-    // TODO: hacer diferentes cosas segun el tipo de texto
-    CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_ORANGE }));
+
+    if (curr_text_type_mode == _TEXT_BOLD){
+        CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_ORANGE }));
+    } else if (curr_text_type_mode == _TEXT_ITALIC) {
+        CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_BLUE }));
+    }
+    else { // text regular
+        CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_FOREGROUND }));
+    }
+}
+
+// Renders a span node (inline elements like bold, italic, emphasis, etc)
+// When a span type is detected, it changes the rendered text style (curr_text_type_mode)
+// to match the desired style (bold, italic, etc). 
+//
+// After the render of its child elements, the span changes swaps the text mode again to the 
+// previous style.
+void render_span(MarkdownNode *current_node) {
+    MarkdownNode *node = current_node;
+
+    if (node->value.span.type == MD_SPAN_EM) { // Emphasis <em>...<\em>
+        TextTypeMode previous_text_type_mode = curr_text_type_mode;
+        curr_text_type_mode = _TEXT_ITALIC;
+        if (node->first_child) {
+            render_node(node->first_child);
+        }
+        curr_text_type_mode = previous_text_type_mode;
+    }
+
+    if (node->value.span.type == MD_SPAN_STRONG) {
+        TextTypeMode previous_text_type_mode = curr_text_type_mode;
+        curr_text_type_mode = _TEXT_BOLD;
+        if (node->first_child) {
+            render_node(node->first_child);
+        }
+        curr_text_type_mode = previous_text_type_mode;
+    }
+
+    if (node->value.span.type == MD_SPAN_A) {}
+    if (node->value.span.type == MD_SPAN_IMG) {}
+    if (node->value.span.type == MD_SPAN_CODE) {}
+    if (node->value.span.type == MD_SPAN_DEL) {}
+    if (node->value.span.type == MD_SPAN_LATEXMATH) {}
+    if (node->value.span.type == MD_SPAN_LATEXMATH_DISPLAY) {}
+    if (node->value.span.type == MD_SPAN_WIKILINK) {}
+    if (node->value.span.type == MD_SPAN_U) {}
+}
+
+// Renders a block node (block-level elements like paragraphs, headers)
+void render_block(MarkdownNode *current_node) {
+    MarkdownNode *node = current_node;
+
+    // TODO: distinguish block types
+    CLAY_AUTO_ID({
+        .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .padding = {16, 16, 16, 16},
+            .childGap = 16,
+            .sizing = { .width = CLAY_SIZING_GROW(0) }
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+        .clip = { .vertical = true, .childOffset = (Clay_Vector2) {0 ,0} }
+    }) {
+        if (node->first_child) {
+            render_node(node->first_child);
+        }
+    }
 }
 
 // ============================================================================
-// LAYOUT PRINCIPAL
+// MAIN LAYOUT
 // ============================================================================
 
-void RenderNode(MarkdownNode *cur_node) {
-    MarkdownNode *node = cur_node;
-
+// Renders a markdown node and its siblings, recursively parsing all the childs first
+void render_node(MarkdownNode *current_node) {
+    MarkdownNode *node = current_node;
     while (node) {
         switch (node->type) {
             case NODE_TEXT:
-                RenderText(node);
+                render_text(node);
                 break;
-
             case NODE_SPAN:
-                if (node->value.span.type == MD_SPAN_STRONG) {
-                    CLAY_AUTO_ID({
-                            .layout = {
-                            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                            .padding = {16, 16, 16, 16},
-                            .childGap = 16,
-                            .sizing = { .width = CLAY_SIZING_GROW(0) }
-                            },
-                            .backgroundColor = COLOR_BLUE,
-                            .clip = {
-                            .vertical = true, .childOffset = (Clay_Vector2) {
-                            0,0
-                            }
-                            }
-                            }) {
-                        // TODO: hacer un wrap de ese if con estilos
-                        if (node->first_child) {
-                            RenderNode(node->first_child);
-                        }
-                    }
-                }
+                render_span(node);
                 break;
-
             case NODE_BLOCK:
-                // TODO: hacer un wrap de ese if con estilos segun el tipo de nodo
-                if (node->first_child) {
-                    RenderNode(node->first_child);
-                }
+                render_block(node);
                 break;
         }
         node = node->next_sibling;
     }
 }
 
-Clay_RenderCommandArray render_markdown_tree() {
+// Renders the complete markdown tree using Clay layout system
+Clay_RenderCommandArray render_markdown_tree(void) {
     MarkdownNode *node = get_root_node();
 
     Clay_BeginLayout();
@@ -154,11 +215,10 @@ Clay_RenderCommandArray render_markdown_tree() {
             }
         }
     }) {
-        // Manda renderiza solo los nodos de la raiz, pero no hace nada de logica 
-        // a parte.
-        while (node) {
-            RenderNode(node);
-            node = node->next_sibling;
+        // The root node is a single node, it does not have siblings, so whe do not have to 
+        // check and render its siblings
+        if (node->first_child) {
+            render_node(node->first_child);
         }
     }
 
@@ -166,9 +226,11 @@ Clay_RenderCommandArray render_markdown_tree() {
 }
 
 // ============================================================================
-// LOOP PRINCIPAL
+// MAIN LOOP
 // ============================================================================
-void update_frame() {
+
+// Updates the application state and renders the current frame
+void update_frame(void) {
     if (IsKeyPressed(KEY_D)) {
         g_debug_enabled = !g_debug_enabled;
         Clay_SetDebugModeEnabled(g_debug_enabled);
