@@ -33,7 +33,7 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 }
 
 // ------------------------------
-//  Callbacks de MD4C
+//  MD4C Callbacks 
 // ------------------------------
 
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
@@ -105,6 +105,7 @@ static int on_text(MD_TEXTTYPE type, const MD_CHAR *text, MD_SIZE size, void *us
 //  Parser Markdown
 // ------------------------------
 
+// Note: it works using md4c function callbacks to build a elements tree out of the parsing results.
 int parse_markdown(const char* text) {
     MD_SIZE size = strlen(text);
 
@@ -127,7 +128,7 @@ int parse_markdown(const char* text) {
 }
 
 // ------------------------------
-//  Funciones de recorrido
+//  Tree operation methods
 // ------------------------------
 
 MarkdownNode *next_node(MarkdownNode *parent) {
@@ -138,10 +139,6 @@ MarkdownNode *next_node(MarkdownNode *parent) {
 MarkdownNode *get_root_node(void) {
     return root_node;
 }
-
-// ------------------------------
-//  Liberar memoria
-// ------------------------------
 
 void free_tree(MarkdownNode *node) {
     if (!node) return;
@@ -163,7 +160,7 @@ void free_tree(MarkdownNode *node) {
 }
 
 // ------------------------------
-//  Debug: imprimir árbol
+//  Debug utilities
 // ------------------------------
 
 void print_tree(const MarkdownNode *node, int indent) {

@@ -161,7 +161,7 @@ void render_block(MarkdownNode *current_node) {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .padding = {16, 16, 16, 16},
             .childGap = 16,
-            .sizing = { .width = CLAY_SIZING_GROW(0) }
+            .sizing = { .width = CLAY_SIZING_FIT(0) }
         },
         .backgroundColor = COLOR_BACKGROUND,
         .clip = { .vertical = true, .childOffset = (Clay_Vector2) {0 ,0} }
@@ -231,17 +231,30 @@ Clay_RenderCommandArray render_markdown_tree(void) {
 
 // Updates the application state and renders the current frame
 void update_frame(void) {
+    // Debug key
     if (IsKeyPressed(KEY_D)) {
         g_debug_enabled = !g_debug_enabled;
         Clay_SetDebugModeEnabled(g_debug_enabled);
     }
 
-    Clay_Vector2 mouse_position = RAYLIB_VECTOR2_TO_CLAY_VECTOR2(GetMousePosition());
-    Clay_SetPointerState(mouse_position, IsMouseButtonDown(0));
-
+    // Update dimensions to handle resizing
     Clay_SetLayoutDimensions((Clay_Dimensions) {
-        (float)GetScreenWidth(), (float)GetScreenHeight()
+        .width = GetScreenWidth(),
+        .height = GetScreenHeight() / 2
     });
+
+    // Update scroll containers
+    Vector2 mousePosition = GetMousePosition();
+    Vector2 scrollDelta = GetMouseWheelMoveV();
+    Clay_SetPointerState(
+        (Clay_Vector2) { mousePosition.x, mousePosition.y },
+        IsMouseButtonDown(0)
+    );
+    Clay_UpdateScrollContainers(
+        true,
+        (Clay_Vector2) { scrollDelta.x, scrollDelta.y },
+        GetFrameTime()
+    );
 
     // Generate the auto layout for rendering
     Clay_RenderCommandArray render_commands = render_markdown_tree();
@@ -251,4 +264,10 @@ void update_frame(void) {
     ClearBackground(WHITE);
     Clay_Raylib_Render(render_commands, g_fonts);
     EndDrawing();
+}
+
+void start_main_loop() {
+    while(!WindowShouldClose()){
+        update_frame();
+    }
 }
