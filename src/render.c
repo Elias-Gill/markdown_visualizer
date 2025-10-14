@@ -13,19 +13,20 @@
 #define COLOR_BLUE       (Clay_Color) {111, 173, 162, 255}
 #define COLOR_FOREGROUND (Clay_Color) {23, 23, 23, 255}
 #define COLOR_BACKGROUND (Clay_Color) {255, 255, 255, 255}
+#define MAX_CONTAINER_WIDTH 900
 
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
 #define MAIN_LAYOUT_ID "main_layout"
-
 bool g_debug_enabled = true;
 
 // Fonts
-const uint32_t FONT_ID_BODY_16 = 1;
-const uint32_t FONT_ID_BODY_24 = 0;
-Font g_fonts[2];
+const uint32_t FONT_ID_BODY_REGULAR = 0;
+Font g_fonts[1];
 
-void render_node(MarkdownNode *current_node);
+const Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_FOREGROUND };
+const Clay_TextElementConfig font_body_italic = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_ORANGE };
+const Clay_TextElementConfig font_body_bold = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_BLUE };
 
 // Current text mode (used to render different type of text)
 typedef enum {
@@ -39,13 +40,11 @@ TextTypeMode curr_text_type_mode = _TEXT_REGULAR;
 // ============================================================================
 // INIT FUNCTIONS
 // ============================================================================
+void render_node(MarkdownNode *current_node);
 
 void load_fonts(void) {
-    g_fonts[FONT_ID_BODY_24] = LoadFontEx("resources/Roboto-Regular.ttf", 48, 0, 400);
-    SetTextureFilter(g_fonts[FONT_ID_BODY_24].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_BODY_16] = LoadFontEx("resources/Roboto-Regular.ttf", 32, 0, 400);
-    SetTextureFilter(g_fonts[FONT_ID_BODY_16].texture, TEXTURE_FILTER_BILINEAR);
+    g_fonts[FONT_ID_BODY_REGULAR] = LoadFontEx("resources/Roboto-Regular.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_BODY_REGULAR].texture, TEXTURE_FILTER_BILINEAR);
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
 }
@@ -105,12 +104,11 @@ void render_text(MarkdownNode *node) {
     Clay_String text = make_clay_string(cast_node_value.text, cast_node_value.size, true);
 
     if (curr_text_type_mode == _TEXT_BOLD){
-        CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_ORANGE }));
+        CLAY_TEXT(text, CLAY_TEXT_CONFIG(font_body_bold));
     } else if (curr_text_type_mode == _TEXT_ITALIC) {
-        CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_BLUE }));
-    }
-    else { // text regular
-        CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 24, .textColor = COLOR_FOREGROUND }));
+        CLAY_TEXT(text, CLAY_TEXT_CONFIG(font_body_italic));
+    } else { // text regular
+        CLAY_TEXT(text, CLAY_TEXT_CONFIG(font_body_regular));
     }
 }
 
@@ -155,21 +153,24 @@ void render_span(MarkdownNode *current_node) {
 void render_block(MarkdownNode *current_node) {
     MarkdownNode *node = current_node;
 
-    // TODO: distinguish block types
-    CLAY_AUTO_ID({
-        .layout = {
-            .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .padding = {16, 16, 16, 16},
-            .childGap = 16,
-            .sizing = { .width = CLAY_SIZING_FIT(0) }
-        },
-        .backgroundColor = COLOR_BACKGROUND,
-        .clip = { .vertical = true, .childOffset = (Clay_Vector2) {0 ,0} }
-    }) {
-        if (node->first_child) {
-            render_node(node->first_child);
+    // Inside a span block
+    if (node->value.block.type == MD_BLOCK_P) {
+        CLAY_AUTO_ID({
+                .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .padding = {16, 16, 16, 16},
+                .childGap = 16,
+                .sizing = { .width = CLAY_SIZING_FIT(0) }
+                },
+                .backgroundColor = COLOR_BACKGROUND,
+                .clip = { .vertical = true, .childOffset = (Clay_Vector2) {0 ,0} }
+                }) {
+            if (node->first_child) {
+                render_node(node->first_child);
+            }
         }
     }
+    /*TODO: add support for other block types */
 }
 
 // ============================================================================
