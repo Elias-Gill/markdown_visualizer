@@ -24,24 +24,48 @@ bool g_debug_enabled = true;
 const uint32_t FONT_ID_BODY_REGULAR = 0;
 Font g_fonts[1];
 
-const Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_FOREGROUND };
-const Clay_TextElementConfig font_body_italic = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_ORANGE };
-const Clay_TextElementConfig font_body_bold = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_BLUE };
+Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_ORANGE };
+Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_BLUE };
 
-// Current text mode (used to render different type of text)
-typedef enum {
-    _TEXT_BOLD,
-    _TEXT_ITALIC,
-    _TEXT_REGULAR
-} TextTypeMode;
+// NOTE: initialized on rendering and updated on every frame if the screen is resized
+// Determines the number of characters that can fit inside a line.
+int available_characters = 0;
 
-TextTypeMode curr_text_type_mode = _TEXT_REGULAR;
+typedef struct {
+    Clay_String string;
+    Clay_TextElementConfig *config;
+} TextElement;
+
+// Temporary text buffers registry (must live until after Clay_Raylib_Render)
+static char **g_temp_text_buffers = NULL;
+static int   g_temp_text_count = 0;
+static int   g_temp_text_capacity = 0;
+
+static void ensure_temp_text_capacity(int needed) {
+    if (g_temp_text_capacity >= needed) return;
+    int newcap = g_temp_text_capacity ? g_temp_text_capacity * 2 : 256;
+    while (newcap < needed) newcap *= 2;
+    g_temp_text_buffers = (char**)realloc(g_temp_text_buffers, newcap * sizeof(char*));
+    g_temp_text_capacity = newcap;
+}
+
+static void push_temp_text_buffer(char *buf) {
+    ensure_temp_text_capacity(g_temp_text_count + 1);
+    g_temp_text_buffers[g_temp_text_count++] = buf;
+}
+
+static void free_all_temp_text_buffers(void) {
+    for (int i = 0; i < g_temp_text_count; ++i) {
+        free(g_temp_text_buffers[i]);
+    }
+    g_temp_text_count = 0;
+    // keep g_temp_text_buffers allocated for reuse to avoid repeated realloc/free
+}
 
 // ============================================================================
 // INIT FUNCTIONS
 // ============================================================================
-void render_node(MarkdownNode *current_node);
-
 void load_fonts(void) {
     g_fonts[FONT_ID_BODY_REGULAR] = LoadFontEx("resources/Roboto-Regular.ttf", 32, 0, 400);
     SetTextureFilter(g_fonts[FONT_ID_BODY_REGULAR].texture, TEXTURE_FILTER_BILINEAR);
@@ -92,109 +116,161 @@ static inline Clay_String make_clay_string(char *text, long length, bool is_heap
     };
 }
 
-// Renders a text node with appropriate styling
-void render_text(MarkdownNode *node) {
-    TextNode cast_node_value = node->value.text;
-
-    // Ignore soft brakes ('\n')
-    if (cast_node_value.type == MD_TEXT_SOFTBR) {
-        return;
-    }
-
-    Clay_String text = make_clay_string(cast_node_value.text, cast_node_value.size, true);
-
-    if (curr_text_type_mode == _TEXT_BOLD){
-        CLAY_TEXT(text, CLAY_TEXT_CONFIG(font_body_bold));
-    } else if (curr_text_type_mode == _TEXT_ITALIC) {
-        CLAY_TEXT(text, CLAY_TEXT_CONFIG(font_body_italic));
-    } else { // text regular
-        CLAY_TEXT(text, CLAY_TEXT_CONFIG(font_body_regular));
+static void render_text_elements(TextElement *line, int count) {
+    CLAY_AUTO_ID({
+            .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .childGap = 2,
+            .sizing = { .width = CLAY_SIZING_GROW(0) }
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+            }) {
+        for (int i = 0; i < count; ++i) {
+            // config is stored as pointer to global config; dereference for CLAY_TEXT
+            CLAY_TEXT(line[i].string, line[i].config);
+        }
     }
 }
 
-// Renders a span node (inline elements like bold, italic, emphasis, etc)
-// When a span type is detected, it changes the rendered text style (curr_text_type_mode)
-// to match the desired style (bold, italic, etc). 
-//
-// After the render of its child elements, the span changes swaps the text mode again to the 
-// previous style.
-void render_span(MarkdownNode *current_node) {
-    MarkdownNode *node = current_node;
+// Inserta un fragmento de texto en la línea actual.
+// Si la línea se llenó, la renderiza y vacía. No libera buffers aquí.
+static void push_text_segment(
+    TextElement *line,
+    int *index,
+    int *char_count,
+    const char *src,
+    int len,
+    Clay_TextElementConfig *config
+) {
+    // Copiar el fragmento a un buffer temporal
+    char *buf = (char*)malloc((len + 1));
+    memcpy(buf, src, len);
+    buf[len] = '\0';
 
-    if (node->value.span.type == MD_SPAN_EM) { // Emphasis <em>...<\em>
-        TextTypeMode previous_text_type_mode = curr_text_type_mode;
-        curr_text_type_mode = _TEXT_ITALIC;
-        if (node->first_child) {
-            render_node(node->first_child);
-        }
-        curr_text_type_mode = previous_text_type_mode;
+    // Registrar buffer para liberar después del render
+    push_temp_text_buffer(buf);
+
+    line[*index].string = make_clay_string(buf, len, true);
+    line[*index].config = config;
+    (*index)++;
+    (*char_count) += len;
+
+    // Si la línea se llenó, renderiza y reinicia contadores (no liberar aquí)
+    if (*char_count >= available_characters) {
+        render_text_elements(line, *index);
+        *index = 0;
+        *char_count = 0;
     }
-
-    if (node->value.span.type == MD_SPAN_STRONG) {
-        TextTypeMode previous_text_type_mode = curr_text_type_mode;
-        curr_text_type_mode = _TEXT_BOLD;
-        if (node->first_child) {
-            render_node(node->first_child);
-        }
-        curr_text_type_mode = previous_text_type_mode;
-    }
-
-    if (node->value.span.type == MD_SPAN_A) {}
-    if (node->value.span.type == MD_SPAN_IMG) {}
-    if (node->value.span.type == MD_SPAN_CODE) {}
-    if (node->value.span.type == MD_SPAN_DEL) {}
-    if (node->value.span.type == MD_SPAN_LATEXMATH) {}
-    if (node->value.span.type == MD_SPAN_LATEXMATH_DISPLAY) {}
-    if (node->value.span.type == MD_SPAN_WIKILINK) {}
-    if (node->value.span.type == MD_SPAN_U) {}
 }
 
-// Renders a block node (block-level elements like paragraphs, headers)
 void render_block(MarkdownNode *current_node) {
+    CLAY_AUTO_ID({
+            .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .padding = {1, 1, 1, 1},
+            .childGap = 2,
+            .sizing = { .width = CLAY_SIZING_GROW(0) }
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+            }) {
     MarkdownNode *node = current_node;
+    int node_type = node->value.block.type;
 
-    // Inside a span block
-    if (node->value.block.type == MD_BLOCK_P) {
-        CLAY_AUTO_ID({
-                .layout = {
-                .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                .padding = {16, 16, 16, 16},
-                .childGap = 16,
-                .sizing = { .width = CLAY_SIZING_FIT(0) }
-                },
-                .backgroundColor = COLOR_BACKGROUND,
-                .clip = { .vertical = true, .childOffset = (Clay_Vector2) {0 ,0} }
-                }) {
-            if (node->first_child) {
-                render_node(node->first_child);
+    switch (node_type) {
+        case MD_BLOCK_P: {
+            TextElement line[256];
+            // Ensure a clean slate
+            for (int i = 0; i < 256; ++i) {
+                line[i].string.chars = NULL;
+                line[i].string.length = 0;
+                line[i].string.isStaticallyAllocated = true;
+                line[i].config = &font_body_regular;
             }
+            int index = 0;
+            int char_count = 0;
+
+            MarkdownNode *aux = node->first_child;
+            while (aux) {
+                const char *string = NULL;
+                int size = 0;
+                Clay_TextElementConfig *config = &font_body_regular;
+
+                switch (aux->type) {
+                    case NODE_TEXT:
+                        // Ignore soft breaks
+                        if (aux->value.text.type == MD_TEXT_SOFTBR) {
+                            aux = aux->next_sibling;
+                            continue;
+                        }
+                        string = aux->value.text.text;
+                        size = aux->value.text.size;
+                        config = &font_body_regular;
+                        break;
+
+                    case NODE_SPAN:
+                        // Map span types to configs
+                        switch (aux->value.span.type) {
+                            case MD_SPAN_EM:
+                                config = &font_body_italic;
+                                break;
+                            case MD_SPAN_STRONG:
+                                config = &font_body_bold;
+                                break;
+                            default:
+                                aux = aux->next_sibling;
+                                continue;
+                        }
+                        if (aux->first_child && aux->first_child->type == NODE_TEXT) {
+                            string = aux->first_child->value.text.text;
+                            size = aux->first_child->value.text.size;
+                        } else {
+                            aux = aux->next_sibling;
+                            continue;
+                        }
+                        break;
+
+                    default:
+                        aux = aux->next_sibling;
+                        continue;
+                }
+
+                int consumed = 0;
+                while (consumed < size) {
+                    // If no space, flush current line
+                    int space = available_characters - char_count;
+                    if (space <= 0) {
+                        if (index > 0) {
+                            render_text_elements(line, index);
+                            index = 0;
+                            char_count = 0;
+                        }
+                        space = available_characters;
+                    }
+
+                    int remaining = size - consumed;
+                    int take = remaining > space ? space : remaining;
+                    push_text_segment(line, &index, &char_count, string + consumed, take, config);
+                    consumed += take;
+                }
+
+                aux = aux->next_sibling;
+            }
+
+            // Render any remaining elements in the last line
+            if (index > 0) {
+                render_text_elements(line, index);
+            }
+            break;
         }
+        default:
+            break;
     }
-    /*TODO: add support for other block types */
+    }
 }
 
 // ============================================================================
 // MAIN LAYOUT
 // ============================================================================
-
-// Renders a markdown node and its siblings, recursively parsing all the childs first
-void render_node(MarkdownNode *current_node) {
-    MarkdownNode *node = current_node;
-    while (node) {
-        switch (node->type) {
-            case NODE_TEXT:
-                render_text(node);
-                break;
-            case NODE_SPAN:
-                render_span(node);
-                break;
-            case NODE_BLOCK:
-                render_block(node);
-                break;
-        }
-        node = node->next_sibling;
-    }
-}
 
 // Renders the complete markdown tree using Clay layout system
 Clay_RenderCommandArray render_markdown_tree(void) {
@@ -202,24 +278,30 @@ Clay_RenderCommandArray render_markdown_tree(void) {
 
     Clay_BeginLayout();
 
+    int left_pad = (int) (GetScreenWidth() / 10); // 24 is the regular font size
     CLAY(CLAY_ID(MAIN_LAYOUT_ID), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .padding = {16, 16, 16, 16},
+            .padding = { left_pad, 0, 36, 36 },
             .childGap = 16,
+            .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
             .sizing = { .width = CLAY_SIZING_GROW(0) }
         },
         .backgroundColor = COLOR_BACKGROUND,
         .clip = {
-            .vertical = true, .childOffset = (Clay_Vector2) {
-                0,0
-            }
+            .vertical = true,
+            .horizontal = true,
+            .childOffset = Clay_GetScrollOffset()
         }
     }) {
-        // The root node is a single node, it does not have siblings, so whe do not have to 
-        // check and render its siblings
+        // The root node is a single node, it does not have siblings. All the childs of the
+        // root node are always block nodes.
         if (node->first_child) {
-            render_node(node->first_child);
+            node = node->first_child;
+            while (node) {
+                render_block(node);
+                node = node->next_sibling;
+            }
         }
     }
 
@@ -241,19 +323,22 @@ void update_frame(void) {
     // Update dimensions to handle resizing
     Clay_SetLayoutDimensions((Clay_Dimensions) {
         .width = GetScreenWidth(),
-        .height = GetScreenHeight() / 2
+        .height = GetScreenHeight()
     });
+
+    // Calculate how many characters can be displayed in a single line.
+    available_characters = (int) (GetScreenWidth() / 12); // 24 is the regular font size
 
     // Update scroll containers
     Vector2 mousePosition = GetMousePosition();
-    Vector2 scrollDelta = GetMouseWheelMoveV();
     Clay_SetPointerState(
         (Clay_Vector2) { mousePosition.x, mousePosition.y },
         IsMouseButtonDown(0)
     );
+    Vector2 scrollDelta = GetMouseWheelMoveV();
     Clay_UpdateScrollContainers(
         true,
-        (Clay_Vector2) { scrollDelta.x, scrollDelta.y },
+        (Clay_Vector2) { scrollDelta.x, scrollDelta.y * 3.5 },
         GetFrameTime()
     );
 
@@ -264,6 +349,10 @@ void update_frame(void) {
     BeginDrawing();
     ClearBackground(WHITE);
     Clay_Raylib_Render(render_commands, g_fonts);
+
+    // Now it's safe to free all temporary text buffers created during layout
+    free_all_temp_text_buffers();
+
     EndDrawing();
 }
 

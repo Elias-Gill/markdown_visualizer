@@ -169,8 +169,12 @@ void print_tree(const MarkdownNode *node, int indent) {
 
         switch (node->type) {
             case NODE_TEXT:
-                printf("[TEXT] type=%d, text='%s'\n", node->value.text.type,
-                       node->value.text.text ? node->value.text.text : "(null)");
+                if (node->value.text.type == MD_TEXT_SOFTBR){
+                    printf("[TEXT] type=softbrake\n");
+                } else {
+                    printf("[TEXT] type=%d, text='%s'\n", node->value.text.type,
+                            node->value.text.text ? node->value.text.text : "(null)");
+                }
                 break;
             case NODE_SPAN:
                 printf("[SPAN] type=%d\n",
