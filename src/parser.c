@@ -33,7 +33,7 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 }
 
 // ------------------------------
-//  MD4C Callbacks 
+//  MD4C Callbacks
 // ------------------------------
 
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
@@ -168,22 +168,22 @@ void print_tree(const MarkdownNode *node, int indent) {
         for (int i = 0; i < indent; i++) printf("\t");
 
         switch (node->type) {
-            case NODE_TEXT:
-                if (node->value.text.type == MD_TEXT_SOFTBR){
-                    printf("[TEXT] type=softbrake\n");
-                } else {
-                    printf("[TEXT] type=%d, text='%s'\n", node->value.text.type,
-                            node->value.text.text ? node->value.text.text : "(null)");
-                }
-                break;
-            case NODE_SPAN:
-                printf("[SPAN] type=%d\n",
-                       node->value.span.type);
-                break;
-            case NODE_BLOCK:
-                printf("[BLOCK] type=%d\n",
-                       node->value.block.type);
-                break;
+        case NODE_TEXT:
+            if (node->value.text.type == MD_TEXT_SOFTBR) {
+                printf("[TEXT] type=softbrake\n");
+            } else {
+                printf("[TEXT] type=%d, text='%s'\n", node->value.text.type,
+                       node->value.text.text ? node->value.text.text : "(null)");
+            }
+            break;
+        case NODE_SPAN:
+            printf("[SPAN] type=%d\n",
+                   node->value.span.type);
+            break;
+        case NODE_BLOCK:
+            printf("[BLOCK] type=%d\n",
+                   node->value.block.type);
+            break;
         }
 
         if (node->first_child) {

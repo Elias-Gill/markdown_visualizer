@@ -86,7 +86,8 @@ void load_fonts(void) {
     g_fonts[FONT_ID_SEMIBOLD] = LoadFontEx("resources/NotoSans-SemiBold.ttf", 32, 0, 400);
     SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD].texture, TEXTURE_FILTER_BILINEAR);
 
-    g_fonts[FONT_ID_SEMIBOLD_ITALIC] = LoadFontEx("resources/NotoSans-SemiBoldItalic.ttf", 32, 0, 400);
+    g_fonts[FONT_ID_SEMIBOLD_ITALIC] = LoadFontEx("resources/NotoSans-SemiBoldItalic.ttf", 32,
+                                       0, 400);
     SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
 
     g_fonts[FONT_ID_BOLD] = LoadFontEx("resources/NotoSans-Bold.ttf", 32, 0, 400);
@@ -133,7 +134,8 @@ void init_clay(void) {
 // ============================================================================
 
 // Creates a Clay_String from a C string
-static inline Clay_String make_clay_string(char *text, long length, bool is_heap_allocated) {
+static inline Clay_String make_clay_string(char *text, long length,
+        bool is_heap_allocated) {
     return (Clay_String) {
         .isStaticallyAllocated = !is_heap_allocated,
         .length = length,
@@ -143,13 +145,13 @@ static inline Clay_String make_clay_string(char *text, long length, bool is_heap
 
 static void render_text_elements(TextElement *line, int count) {
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .childGap = 2,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-            }) {
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+    }) {
         for (int i = 0; i < count; ++i) {
             // config is stored as pointer to global config; dereference for CLAY_TEXT
             CLAY_TEXT(line[i].string, line[i].config);
@@ -190,18 +192,18 @@ static void push_text_segment(
 
 void render_block(MarkdownNode *current_node) {
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .padding = {1, 1, 1, 1},
             .childGap = 2,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-            }) {
-    MarkdownNode *node = current_node;
-    int node_type = node->value.block.type;
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+    }) {
+        MarkdownNode *node = current_node;
+        int node_type = node->value.block.type;
 
-    switch (node_type) {
+        switch (node_type) {
         case MD_BLOCK_P: {
             TextElement line[256];
             // Ensure a clean slate
@@ -221,42 +223,42 @@ void render_block(MarkdownNode *current_node) {
                 Clay_TextElementConfig *config = &font_body_regular;
 
                 switch (aux->type) {
-                    case NODE_TEXT:
-                        // Ignore soft breaks
-                        if (aux->value.text.type == MD_TEXT_SOFTBR) {
-                            aux = aux->next_sibling;
-                            continue;
-                        }
-                        string = aux->value.text.text;
-                        size = aux->value.text.size;
-                        config = &font_body_regular;
-                        break;
+                case NODE_TEXT:
+                    // Ignore soft breaks
+                    if (aux->value.text.type == MD_TEXT_SOFTBR) {
+                        aux = aux->next_sibling;
+                        continue;
+                    }
+                    string = aux->value.text.text;
+                    size = aux->value.text.size;
+                    config = &font_body_regular;
+                    break;
 
-                    case NODE_SPAN:
-                        // Map span types to configs
-                        switch (aux->value.span.type) {
-                            case MD_SPAN_EM:
-                                config = &font_body_italic;
-                                break;
-                            case MD_SPAN_STRONG:
-                                config = &font_body_bold;
-                                break;
-                            default:
-                                aux = aux->next_sibling;
-                                continue;
-                        }
-                        if (aux->first_child && aux->first_child->type == NODE_TEXT) {
-                            string = aux->first_child->value.text.text;
-                            size = aux->first_child->value.text.size;
-                        } else {
-                            aux = aux->next_sibling;
-                            continue;
-                        }
+                case NODE_SPAN:
+                    // Map span types to configs
+                    switch (aux->value.span.type) {
+                    case MD_SPAN_EM:
+                        config = &font_body_italic;
                         break;
-
+                    case MD_SPAN_STRONG:
+                        config = &font_body_bold;
+                        break;
                     default:
                         aux = aux->next_sibling;
                         continue;
+                    }
+                    if (aux->first_child && aux->first_child->type == NODE_TEXT) {
+                        string = aux->first_child->value.text.text;
+                        size = aux->first_child->value.text.size;
+                    } else {
+                        aux = aux->next_sibling;
+                        continue;
+                    }
+                    break;
+
+                default:
+                    aux = aux->next_sibling;
+                    continue;
                 }
 
                 int consumed = 0;
@@ -289,7 +291,7 @@ void render_block(MarkdownNode *current_node) {
         }
         default:
             break;
-    }
+        }
     }
 }
 
@@ -357,14 +359,18 @@ void update_frame(void) {
     // Update scroll containers
     Vector2 mousePosition = GetMousePosition();
     Clay_SetPointerState(
-        (Clay_Vector2) { mousePosition.x, mousePosition.y },
-        IsMouseButtonDown(0)
+    (Clay_Vector2) {
+        mousePosition.x, mousePosition.y
+    },
+    IsMouseButtonDown(0)
     );
     Vector2 scrollDelta = GetMouseWheelMoveV();
     Clay_UpdateScrollContainers(
         true,
-        (Clay_Vector2) { scrollDelta.x, scrollDelta.y * 3.5 },
-        GetFrameTime()
+    (Clay_Vector2) {
+        scrollDelta.x, scrollDelta.y * 3.5
+    },
+    GetFrameTime()
     );
 
     // Generate the auto layout for rendering
@@ -382,7 +388,7 @@ void update_frame(void) {
 }
 
 void start_main_loop() {
-    while(!WindowShouldClose()){
+    while(!WindowShouldClose()) {
         update_frame();
     }
 }
