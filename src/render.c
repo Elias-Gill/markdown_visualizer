@@ -20,13 +20,23 @@
 #define MAIN_LAYOUT_ID "main_layout"
 bool g_debug_enabled = true;
 
-// Fonts
-const uint32_t FONT_ID_BODY_REGULAR = 0;
-Font g_fonts[1];
+// ---------- Fonts ------------
+const uint32_t FONT_ID_REGULAR          = 0;
+const uint32_t FONT_ID_ITALIC           = 1;
+const uint32_t FONT_ID_SEMIBOLD         = 2;
+const uint32_t FONT_ID_SEMIBOLD_ITALIC  = 3;
+const uint32_t FONT_ID_BOLD             = 4;
+const uint32_t FONT_ID_EXTRABOLD        = 5;
+Font g_fonts[6];
 
-Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_ORANGE };
-Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BODY_REGULAR, .fontSize = 24, .textColor = COLOR_BLUE };
+Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSize = 24, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = 24, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = 24, .textColor = COLOR_FOREGROUND };
+
+Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 34, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 30, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 28, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = 26, .textColor = COLOR_FOREGROUND };
 
 // NOTE: initialized on rendering and updated on every frame if the screen is resized
 // Determines the number of characters that can fit inside a line.
@@ -67,8 +77,23 @@ static void free_all_temp_text_buffers(void) {
 // INIT FUNCTIONS
 // ============================================================================
 void load_fonts(void) {
-    g_fonts[FONT_ID_BODY_REGULAR] = LoadFontEx("resources/Roboto-Regular.ttf", 32, 0, 400);
-    SetTextureFilter(g_fonts[FONT_ID_BODY_REGULAR].texture, TEXTURE_FILTER_BILINEAR);
+    g_fonts[FONT_ID_REGULAR] = LoadFontEx("resources/NotoSans-Regular.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_REGULAR].texture, TEXTURE_FILTER_BILINEAR);
+
+    g_fonts[FONT_ID_ITALIC] = LoadFontEx("resources/NotoSans-Italic.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
+
+    g_fonts[FONT_ID_SEMIBOLD] = LoadFontEx("resources/NotoSans-SemiBold.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD].texture, TEXTURE_FILTER_BILINEAR);
+
+    g_fonts[FONT_ID_SEMIBOLD_ITALIC] = LoadFontEx("resources/NotoSans-SemiBoldItalic.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
+
+    g_fonts[FONT_ID_BOLD] = LoadFontEx("resources/NotoSans-Bold.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_BOLD].texture, TEXTURE_FILTER_BILINEAR);
+
+    g_fonts[FONT_ID_EXTRABOLD] = LoadFontEx("resources/NotoSans-ExtraBold.ttf", 32, 0, 400);
+    SetTextureFilter(g_fonts[FONT_ID_EXTRABOLD].texture, TEXTURE_FILTER_BILINEAR);
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
 }
