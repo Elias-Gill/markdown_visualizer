@@ -33,10 +33,11 @@ Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSiz
 Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = 24, .textColor = COLOR_FOREGROUND };
 Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = 24, .textColor = COLOR_FOREGROUND };
 
-Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 34, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 30, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 28, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = 26, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 38, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 34, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 30, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = 28, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h5 = { .fontId = FONT_ID_ITALIC, .fontSize = 26, .textColor = COLOR_FOREGROUND };
 
 // NOTE: initialized on rendering and updated on every frame if the screen is resized
 // Determines the number of characters that can fit inside a line.
@@ -289,6 +290,26 @@ void render_block(MarkdownNode *current_node) {
             }
             break;
         }
+
+        case MD_BLOCK_H: {
+            MD_BLOCK_H_DETAIL *detail = (MD_BLOCK_H_DETAIL*) node->value.block.detail;
+            unsigned level = detail->level;
+            char *text = node->first_child->value.text.text;
+            int size = node->first_child->value.text.size;
+            if (level == 1) {
+                CLAY_TEXT(make_clay_string(text, size, true), &font_h1);
+            } else if (level == 2) {
+                CLAY_TEXT(make_clay_string(text, size, true), &font_h2);
+            } else if (level == 3) {
+                CLAY_TEXT(make_clay_string(text, size, true), &font_h3);
+            } else if (level == 4) {
+                CLAY_TEXT(make_clay_string(text, size, true), &font_h4);
+            } else {
+                CLAY_TEXT(make_clay_string(text, size, true), &font_h5);
+            }
+            break;
+        }
+
         default:
             break;
         }
@@ -305,11 +326,11 @@ Clay_RenderCommandArray render_markdown_tree(void) {
 
     Clay_BeginLayout();
 
-    int left_pad = (int) (GetScreenWidth() / 10); // 24 is the regular font size
+    int left_pad = (int) (GetScreenWidth() / 8); // Why 8 ? I don't know
     CLAY(CLAY_ID(MAIN_LAYOUT_ID), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .padding = { left_pad, 0, 36, 36 },
+            .padding = { left_pad, 0, 46, 56 },
             .childGap = 16,
             .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
             .sizing = { .width = CLAY_SIZING_GROW(0) }
@@ -354,7 +375,7 @@ void update_frame(void) {
     });
 
     // Calculate how many characters can be displayed in a single line.
-    available_characters = (int) (GetScreenWidth() / 12); // 24 is the regular font size
+    available_characters = (int) (GetScreenWidth() / 12); // Half the regular font size (24)
 
     // Update scroll containers
     Vector2 mousePosition = GetMousePosition();

@@ -39,23 +39,35 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
     MarkdownNode *node = create_node(NODE_BLOCK);
     if (!node) return -1;
+
     node->value.block.type = type;
-    node->value.block.detail = detail;
     node->value.block.userdata = userdata;
 
-    if (!root_node) root_node = node;
-    else insert_child_node(current_node, node);
+    // Solo hacemos copia si es un encabezado (header)
+    if (type == MD_BLOCK_H && detail) {
+        MD_BLOCK_H_DETAIL *copy = malloc(sizeof(MD_BLOCK_H_DETAIL));
+        if (!copy) return -1;  // chequeo simple de malloc
+        *copy = *(MD_BLOCK_H_DETAIL*)detail;
+        node->value.block.detail = copy;
+    } else {
+        node->value.block.detail = detail; // para otros bloques dejamos el puntero tal cual
+    }
+
+    // Insertamos en el árbol
+    if (!root_node)
+        root_node = node;
+    else
+        insert_child_node(current_node, node);
 
     current_node = node; // descendemos
+
     return 0;
 }
 
 static int on_leave_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
     if (!current_node) return -1;
-    current_node->value.block.type = type;
-    current_node->value.block.detail = detail;
-    current_node->value.block.userdata = userdata;
-
+    // Ignore the rest of function parameters because the detais are actually passed 
+    // on the oppening block
     current_node = current_node->parent; // ascendemos
     return 0;
 }
