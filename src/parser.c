@@ -5,6 +5,8 @@
 #include "parser.h"
 #include "md4c.h"
 
+#define MD4C_USE_UTF8
+
 static MarkdownNode *root_node = NULL;
 static MarkdownNode *current_node = NULL;
 

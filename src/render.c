@@ -26,18 +26,23 @@ const uint32_t FONT_ID_ITALIC           = 1;
 const uint32_t FONT_ID_SEMIBOLD         = 2;
 const uint32_t FONT_ID_SEMIBOLD_ITALIC  = 3;
 const uint32_t FONT_ID_BOLD             = 4;
-const uint32_t FONT_ID_EXTRABOLD        = 5;
-Font g_fonts[6];
+const uint32_t FONT_ID_BOLDITALIC       = 5;
+const uint32_t FONT_ID_EXTRABOLD        = 6;
+Font g_fonts[7];
 
-Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSize = 24, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = 24, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = 24, .textColor = COLOR_FOREGROUND };
+const int FONT_SIZE_REGULAR = 24;
 
-Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 38, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 34, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = 30, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = 28, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h5 = { .fontId = FONT_ID_ITALIC, .fontSize = 26, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_FOREGROUND };
+
+Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = FONT_SIZE_REGULAR + 14, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = FONT_SIZE_REGULAR + 12, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = FONT_SIZE_REGULAR + 6, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = FONT_SIZE_REGULAR + 4, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h5 = { .fontId = FONT_ID_ITALIC, .fontSize = FONT_SIZE_REGULAR + 2, .textColor = COLOR_FOREGROUND };
+
+Clay_TextElementConfig inline_code = { .fontId = FONT_ID_REGULAR, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_BLUE };
 
 // NOTE: initialized on rendering and updated on every frame if the screen is resized
 // Determines the number of characters that can fit inside a line.
@@ -78,23 +83,26 @@ static void free_all_temp_text_buffers(void) {
 // INIT FUNCTIONS
 // ============================================================================
 void load_fonts(void) {
-    g_fonts[FONT_ID_REGULAR] = LoadFontEx("resources/NotoSans-Regular.ttf", 32, 0, 400);
+    g_fonts[FONT_ID_REGULAR] = LoadFontEx("resources/NotoSans-Regular.ttf", 32, NULL, 0);
     SetTextureFilter(g_fonts[FONT_ID_REGULAR].texture, TEXTURE_FILTER_BILINEAR);
 
-    g_fonts[FONT_ID_ITALIC] = LoadFontEx("resources/NotoSans-Italic.ttf", 32, 0, 400);
+    g_fonts[FONT_ID_ITALIC] = LoadFontEx("resources/NotoSans-Italic.ttf", 32, NULL, 0);
     SetTextureFilter(g_fonts[FONT_ID_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
 
-    g_fonts[FONT_ID_SEMIBOLD] = LoadFontEx("resources/NotoSans-SemiBold.ttf", 32, 0, 400);
+    g_fonts[FONT_ID_SEMIBOLD] = LoadFontEx("resources/NotoSans-SemiBold.ttf", 32, NULL, 0);
     SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD].texture, TEXTURE_FILTER_BILINEAR);
 
     g_fonts[FONT_ID_SEMIBOLD_ITALIC] = LoadFontEx("resources/NotoSans-SemiBoldItalic.ttf", 32,
-                                       0, 400);
+                                       NULL, 0);
     SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
 
-    g_fonts[FONT_ID_BOLD] = LoadFontEx("resources/NotoSans-Bold.ttf", 32, 0, 400);
+    g_fonts[FONT_ID_BOLD] = LoadFontEx("resources/NotoSans-Bold.ttf", 32, NULL, 0);
     SetTextureFilter(g_fonts[FONT_ID_BOLD].texture, TEXTURE_FILTER_BILINEAR);
 
-    g_fonts[FONT_ID_EXTRABOLD] = LoadFontEx("resources/NotoSans-ExtraBold.ttf", 32, 0, 400);
+    g_fonts[FONT_ID_BOLDITALIC] = LoadFontEx("resources/NotoSans-BoldItalic.ttf", 32, NULL, 0);
+    SetTextureFilter(g_fonts[FONT_ID_BOLD].texture, TEXTURE_FILTER_BILINEAR);
+
+    g_fonts[FONT_ID_EXTRABOLD] = LoadFontEx("resources/NotoSans-ExtraBold.ttf", 32, NULL, 0);
     SetTextureFilter(g_fonts[FONT_ID_EXTRABOLD].texture, TEXTURE_FILTER_BILINEAR);
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
@@ -113,6 +121,8 @@ void handle_clay_errors(Clay_ErrorData error_data) {
 }
 
 void init_clay(void) {
+    /*SetTraceLogLevel(LOG_NONE); */
+
     uint64_t total_memory_size = Clay_MinMemorySize();
     Clay_Arena clay_memory = Clay_CreateArenaWithCapacityAndMemory(total_memory_size,
                              malloc(total_memory_size));
@@ -148,7 +158,7 @@ static void render_text_elements(TextElement *line, int count) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .childGap = 2,
+            .childGap = 0,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
         },
         .backgroundColor = COLOR_BACKGROUND,
@@ -225,8 +235,10 @@ void render_block(MarkdownNode *current_node) {
 
                 switch (aux->type) {
                 case NODE_TEXT:
-                    // Ignore soft breaks
+                    // Insert a single space when encountering a soft break
                     if (aux->value.text.type == MD_TEXT_SOFTBR) {
+                        const char space_char = ' ';
+                        push_text_segment(line, &index, &char_count, &space_char, 1, &font_body_regular);
                         aux = aux->next_sibling;
                         continue;
                     }
@@ -243,6 +255,9 @@ void render_block(MarkdownNode *current_node) {
                         break;
                     case MD_SPAN_STRONG:
                         config = &font_body_bold;
+                        break;
+                    case MD_SPAN_CODE:
+                        config = &inline_code;
                         break;
                     default:
                         aux = aux->next_sibling;
@@ -389,7 +404,7 @@ void update_frame(void) {
     Clay_UpdateScrollContainers(
         true,
     (Clay_Vector2) {
-        scrollDelta.x, scrollDelta.y * 3.5
+        scrollDelta.x, scrollDelta.y * 4.5
     },
     GetFrameTime()
     );
