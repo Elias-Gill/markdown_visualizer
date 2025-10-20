@@ -7,7 +7,7 @@
 char* read_file(char *file_name) {
     FILE *file = fopen(file_name, "r");
     if (file == NULL) {
-        perror("Error opening file");
+        fprintf(stderr, "Error opening file");
         exit(1);
     }
 
@@ -33,7 +33,13 @@ char* read_file(char *file_name) {
 }
 
 int main(int argc, char *argv[]) {
-    parse_markdown(read_file("/home/elias/Descargas/test.md"));
+    if (argc != 2) {
+        fprintf(stderr, "Bad arguments provided. \nUsage: markdown_visualizer <filename>.md");
+        exit(1);
+    }
+
+    char *filename = argv[1];
+    parse_markdown(read_file(filename));
     print_tree(get_root_node(), 0);
 
     init_clay();
