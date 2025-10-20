@@ -1,3 +1,86 @@
 build/
 ctags
 tags
+
+# Directorios de build generados por CMake
+build/
+out/
+bin/
+!*/CMakeLists.txt
+
+# Archivos específicos de CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+!*.cmake.in
+
+# Archivos de instalación
+install_manifest.txt
+_CPack_Packages/
+
+# Multi-config generators (Visual Studio, Xcode)
+*.sln
+*.vcxproj*
+*.xcodeproj/
+*.xcworkspace/
+
+# Archivos de configuración de IDE
+.vs/
+.idea/
+*.user
+*.suo
+*.sdf
+
+# Archivos objeto y bibliotecas
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# Ejecutables
+*.exe
+*.app
+
+# Archivos de depuración
+*.pdb
+*.idb
+
+# Archivos de coverage
+*.gcda
+*.gcno
+*.gcov
+
+# Archivos de documentación
+docs/_build/
+html/
+latex/
+
+# Archivos de dependencias
+.deps/
+.depend
+
+# Archivos de log
+*.log
+
+# Archivos temporales
+*~
+*.swp
+*.swo
+
+# Sistema operativo específico
+.DS_Store
+Thumbs.db
+
+# Archivos de empaquetado
+*.tar.gz
+*.zip
+
+# Testing
+CTestTestfile.cmake
+Testing/
