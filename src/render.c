@@ -9,12 +9,16 @@
 #include "render.h"
 
 // Color palette
-#define COLOR_ORANGE     (Clay_Color) {225, 138, 50, 255}
-#define COLOR_BLUE       (Clay_Color) {111, 173, 162, 255}
-#define COLOR_FOREGROUND (Clay_Color) {23, 23, 23, 255}
-#define COLOR_DIM (Clay_Color) {23, 23, 23, 155}
-#define COLOR_BACKGROUND (Clay_Color) {255, 255, 255, 255}
-#define MAX_CONTAINER_WIDTH 900
+#define COLOR_BACKGROUND (Clay_Color){34, 35, 35, 255}     // #222323
+#define COLOR_FOREGROUND (Clay_Color){222, 222, 222, 255}  // #dedede
+#define COLOR_DIM        (Clay_Color){125, 125, 125, 155}  // #7d7d7d
+#define COLOR_ORANGE     (Clay_Color){230, 185, 157, 255}  // #e6b99d
+#define COLOR_BLUE       (Clay_Color){151, 215, 189, 255}  // #97d7bd
+#define COLOR_PINK       (Clay_Color){196, 146, 177, 255}  // #C492b1
+#define COLOR_BORDER     (Clay_Color){88, 88, 88, 255}     // #585858
+#define COLOR_DARK       (Clay_Color){25, 25, 25, 255}     // #191919
+#define COLOR_HOVER      (Clay_Color){47, 47, 47, 255}     // #2f2f2f
+#define COLOR_HIGHLIGHT  (Clay_Color){59, 59, 62, 255}     // #3b3b3e
 
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
@@ -31,19 +35,19 @@ const uint32_t FONT_ID_BOLDITALIC       = 5;
 const uint32_t FONT_ID_EXTRABOLD        = 6;
 Font g_fonts[7];
 
-const int FONT_SIZE_REGULAR = 24;
+const int BASE_FONT_SIZE = 24;
 
-Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_FOREGROUND };
 
-Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = FONT_SIZE_REGULAR + 14, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = FONT_SIZE_REGULAR + 12, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = FONT_SIZE_REGULAR + 6, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = FONT_SIZE_REGULAR + 4, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h5 = { .fontId = FONT_ID_ITALIC, .fontSize = FONT_SIZE_REGULAR + 2, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = BASE_FONT_SIZE + 14, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = BASE_FONT_SIZE + 12, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = BASE_FONT_SIZE + 6, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = BASE_FONT_SIZE + 4, .textColor = COLOR_FOREGROUND };
+Clay_TextElementConfig font_h5 = { .fontId = FONT_ID_ITALIC, .fontSize = BASE_FONT_SIZE + 2, .textColor = COLOR_FOREGROUND };
 
-Clay_TextElementConfig inline_code = { .fontId = FONT_ID_REGULAR, .fontSize = FONT_SIZE_REGULAR, .textColor = COLOR_BLUE };
+Clay_TextElementConfig inline_code = { .fontId = FONT_ID_REGULAR, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_BLUE };
 
 // NOTE: initialized on rendering and updated on every frame if the screen is resized
 // Determines the number of characters that can fit inside a line.
@@ -83,28 +87,20 @@ static void free_all_temp_text_buffers(void) {
 // ============================================================================
 // INIT FUNCTIONS
 // ============================================================================
+
+void load_font(int id, char *font_path) {
+    g_fonts[id] = LoadFontEx(font_path, BASE_FONT_SIZE * 2, NULL, 0);
+    SetTextureFilter(g_fonts[id].texture, TEXTURE_FILTER_BILINEAR);
+}
+
 void load_fonts(void) {
-    g_fonts[FONT_ID_REGULAR] = LoadFontEx("resources/NotoSans-Regular.ttf", 32, NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_REGULAR].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_ITALIC] = LoadFontEx("resources/NotoSans-Italic.ttf", 32, NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_SEMIBOLD] = LoadFontEx("resources/NotoSans-SemiBold.ttf", 32, NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_SEMIBOLD_ITALIC] = LoadFontEx("resources/NotoSans-SemiBoldItalic.ttf", 32,
-                                       NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_SEMIBOLD_ITALIC].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_BOLD] = LoadFontEx("resources/NotoSans-Bold.ttf", 32, NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_BOLD].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_BOLDITALIC] = LoadFontEx("resources/NotoSans-BoldItalic.ttf", 32, NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_BOLD].texture, TEXTURE_FILTER_BILINEAR);
-
-    g_fonts[FONT_ID_EXTRABOLD] = LoadFontEx("resources/NotoSans-ExtraBold.ttf", 32, NULL, 0);
-    SetTextureFilter(g_fonts[FONT_ID_EXTRABOLD].texture, TEXTURE_FILTER_BILINEAR);
+    load_font(FONT_ID_REGULAR, "resources/NotoSans-Regular.ttf");
+    load_font(FONT_ID_ITALIC, "resources/NotoSans-Italic.ttf");
+    load_font(FONT_ID_SEMIBOLD, "resources/NotoSans-SemiBold.ttf");
+    load_font(FONT_ID_SEMIBOLD_ITALIC, "resources/NotoSans-SemiBoldItalic.ttf");
+    load_font(FONT_ID_BOLD, "resources/NotoSans-Bold.ttf");
+    load_font(FONT_ID_BOLDITALIC, "resources/NotoSans-BoldItalic.ttf");
+    load_font(FONT_ID_EXTRABOLD, "resources/NotoSans-ExtraBold.ttf");
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
 }
@@ -306,6 +302,8 @@ void render_block(MarkdownNode *current_node) {
             }
             break;
             // TODO: move to its own function
+            // TODO: figure out how to make layouts without this kind of recursion and with
+            // more flexibility for this kind of operations.
         }
 
         case MD_BLOCK_H: {
@@ -336,7 +334,7 @@ void render_block(MarkdownNode *current_node) {
                 },
                 .backgroundColor = COLOR_BACKGROUND,
                 .border = { .width = { .top = 1 }, .color = COLOR_DIM }
-            }){};
+            }) {};
             break;
         }
 
@@ -355,7 +353,7 @@ void render_block(MarkdownNode *current_node) {
                     .horizontal = true,
                     .childOffset = Clay_GetScrollOffset()
                 }
-            }){
+            }) {
                 MarkdownNode *child = node->first_child;
                 while(child) {
                     char *text = child->value.text.text;
