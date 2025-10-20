@@ -12,6 +12,7 @@
 #define COLOR_ORANGE     (Clay_Color) {225, 138, 50, 255}
 #define COLOR_BLUE       (Clay_Color) {111, 173, 162, 255}
 #define COLOR_FOREGROUND (Clay_Color) {23, 23, 23, 255}
+#define COLOR_DIM (Clay_Color) {23, 23, 23, 155}
 #define COLOR_BACKGROUND (Clay_Color) {255, 255, 255, 255}
 #define MAX_CONTAINER_WIDTH 900
 
@@ -322,6 +323,19 @@ void render_block(MarkdownNode *current_node) {
             } else {
                 CLAY_TEXT(make_clay_string(text, size, true), &font_h5);
             }
+            break;
+        }
+
+        case MD_BLOCK_HR: {
+            CLAY_AUTO_ID({
+                .layout = {
+                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                    // TODO: darle nombre a estos magic numbers
+                    .sizing = { .width = CLAY_SIZING_GROW(0, available_characters * 8.75) }
+                },
+                .backgroundColor = COLOR_BACKGROUND,
+                .border = { .width = { .top = 1 }, .color = COLOR_DIM }
+            }){};
             break;
         }
 
