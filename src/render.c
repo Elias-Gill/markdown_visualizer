@@ -305,6 +305,7 @@ void render_block(MarkdownNode *current_node) {
                 render_text_elements(line, index);
             }
             break;
+            // TODO: move to its own function
         }
 
         case MD_BLOCK_H: {
@@ -336,6 +337,33 @@ void render_block(MarkdownNode *current_node) {
                 .backgroundColor = COLOR_BACKGROUND,
                 .border = { .width = { .top = 1 }, .color = COLOR_DIM }
             }){};
+            break;
+        }
+
+        case MD_BLOCK_CODE: {
+            CLAY_AUTO_ID({
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    // TODO: darle nombre a estos magic numbers
+                    .sizing = { .width = CLAY_SIZING_GROW(0, available_characters * 8.75) },
+                    .padding = { 16, 16, 16, 16 }
+                },
+                .cornerRadius = 4,
+                .backgroundColor = COLOR_DIM,
+                .clip = {
+                    .vertical = true,
+                    .horizontal = true,
+                    .childOffset = Clay_GetScrollOffset()
+                }
+            }){
+                MarkdownNode *child = node->first_child;
+                while(child) {
+                    char *text = child->value.text.text;
+                    int size = child->value.text.size;
+                    CLAY_TEXT(make_clay_string(text, size, true), &font_body_regular);
+                    child = child->next_sibling;
+                }
+            };
             break;
         }
 
