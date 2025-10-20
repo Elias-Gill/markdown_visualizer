@@ -41,6 +41,10 @@ add_executable(markdown_visualizer
     include/md4c/md4c.c
 )
 
+if(WHITE_MODE)
+    target_compile_definitions(markdown_visualizer PRIVATE WHITE_MODE)
+endif()
+
 # Directorios de include (donde buscar .h)
 target_include_directories(markdown_visualizer PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src

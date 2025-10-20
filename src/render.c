@@ -9,16 +9,29 @@
 #include "render.h"
 
 // Color palette
+#ifdef WHITE_MODE
+#define COLOR_BACKGROUND (Clay_Color){244, 244, 244, 255}  // #f4f4f4
+#define COLOR_FOREGROUND (Clay_Color){34, 34, 34, 255}     // #222222
+#define COLOR_DIM        (Clay_Color){90, 90, 90, 155}     // #5a5a5a
+#define COLOR_PINK       (Clay_Color){177, 68, 130, 255}   // #b14482
+#define COLOR_BLUE       (Clay_Color){60, 163, 116, 255}   // #3CA374
+#define COLOR_ORANGE     (Clay_Color){210, 132, 79, 255}   // #d2844f
+#define COLOR_BORDER     (Clay_Color){199, 199, 199, 255}  // #c7c7c7
+#define COLOR_DARK       (Clay_Color){232, 232, 232, 255}  // #e8e8e8
+#define COLOR_HOVER      (Clay_Color){221, 221, 221, 255}  // #dddddd
+#define COLOR_HIGHLIGHT  (Clay_Color){210, 210, 213, 255}  // #d2d2d5
+#else // ----- DARK MODE -----
 #define COLOR_BACKGROUND (Clay_Color){34, 35, 35, 255}     // #222323
 #define COLOR_FOREGROUND (Clay_Color){222, 222, 222, 255}  // #dedede
 #define COLOR_DIM        (Clay_Color){125, 125, 125, 155}  // #7d7d7d
-#define COLOR_ORANGE     (Clay_Color){230, 185, 157, 255}  // #e6b99d
-#define COLOR_BLUE       (Clay_Color){151, 215, 189, 255}  // #97d7bd
 #define COLOR_PINK       (Clay_Color){196, 146, 177, 255}  // #C492b1
+#define COLOR_BLUE       (Clay_Color){151, 215, 189, 255}  // #97D7BD
+#define COLOR_ORANGE     (Clay_Color){230, 185, 157, 255}  // #e6b99d
 #define COLOR_BORDER     (Clay_Color){88, 88, 88, 255}     // #585858
 #define COLOR_DARK       (Clay_Color){25, 25, 25, 255}     // #191919
 #define COLOR_HOVER      (Clay_Color){47, 47, 47, 255}     // #2f2f2f
 #define COLOR_HIGHLIGHT  (Clay_Color){59, 59, 62, 255}     // #3b3b3e
+#endif
 
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }

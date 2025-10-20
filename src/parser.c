@@ -68,7 +68,7 @@ static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
 
 static int on_leave_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
     if (!current_node) return -1;
-    // Ignore the rest of function parameters because the detais are actually passed 
+    // Ignore the rest of function parameters because the detais are actually passed
     // on the oppening block
     current_node = current_node->parent; // ascendemos
     return 0;

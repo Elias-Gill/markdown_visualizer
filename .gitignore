@@ -3,7 +3,6 @@ ctags
 tags
 
 # Directorios de build generados por CMake
-build/
 out/
 bin/
 !*/CMakeLists.txt
@@ -63,6 +62,7 @@ latex/
 
 # Archivos de dependencias
 .deps/
+_deps/
 .depend
 
 # Archivos de log
