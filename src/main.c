@@ -45,5 +45,7 @@ int main(int argc, char *argv[]) {
     init_clay();
     start_main_loop();
 
+    free_tree(get_root_node());
+
     return 0;
 }
