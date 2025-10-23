@@ -38,7 +38,7 @@
 #define MAIN_LAYOUT_ID "main_layout"
 bool g_debug_enabled = true;
 
-// ---------- Fonts ------------
+// ------------- Fonts --------------
 const uint32_t FONT_ID_REGULAR          = 0;
 const uint32_t FONT_ID_ITALIC           = 1;
 const uint32_t FONT_ID_SEMIBOLD         = 2;
@@ -46,23 +46,23 @@ const uint32_t FONT_ID_SEMIBOLD_ITALIC  = 3;
 const uint32_t FONT_ID_BOLD             = 4;
 const uint32_t FONT_ID_EXTRABOLD        = 5;
 Font g_fonts[6];
+int base_font_size = 22;
 
-const int BASE_FONT_SIZE = 24;
+// Text styles
+Clay_TextElementConfig font_body_regular;
+Clay_TextElementConfig font_body_italic;
+Clay_TextElementConfig font_body_bold;
+Clay_TextElementConfig font_h1;
+Clay_TextElementConfig font_h2;
+Clay_TextElementConfig font_h3;
+Clay_TextElementConfig font_h4;
+Clay_TextElementConfig font_h5;
+Clay_TextElementConfig inline_code;
 
-Clay_TextElementConfig font_body_regular = { .fontId = FONT_ID_REGULAR, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_italic  = { .fontId = FONT_ID_ITALIC, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_body_bold    = { .fontId = FONT_ID_BOLD, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_FOREGROUND };
+// ============================================================================
+// TEXT MANIPULATION FUNCTIONS
+// ============================================================================
 
-Clay_TextElementConfig font_h1 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = BASE_FONT_SIZE + 14, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h2 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = BASE_FONT_SIZE + 12, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h3 = { .fontId = FONT_ID_EXTRABOLD, .fontSize = BASE_FONT_SIZE + 6, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h4 = { .fontId = FONT_ID_BOLD, .fontSize = BASE_FONT_SIZE + 4, .textColor = COLOR_FOREGROUND };
-Clay_TextElementConfig font_h5 = { .fontId = FONT_ID_ITALIC, .fontSize = BASE_FONT_SIZE + 2, .textColor = COLOR_FOREGROUND };
-
-Clay_TextElementConfig inline_code = { .fontId = FONT_ID_REGULAR, .fontSize = BASE_FONT_SIZE, .textColor = COLOR_BLUE };
-
-// NOTE: initialized on rendering and updated on every frame if the screen is resized
-// Determines the number of characters that can fit inside a line.
 int available_characters = 0;
 
 typedef struct {
@@ -70,16 +70,26 @@ typedef struct {
     Clay_TextElementConfig *config;
 } TextElement;
 
-// Temporary text buffers registry (must live until after Clay_Raylib_Render)
+typedef struct {
+    TextElement elements[256];
+    int count;
+    int char_count;
+} TextLine;
+
+// -- Utils forward declarations -- 
+static inline Clay_String make_clay_string(char *text, long length);
+static void render_text_elements(TextElement *line, int count);
+
+// Temporary text buffers
 static char **g_temp_text_buffers = NULL;
-static int   g_temp_text_count = 0;
-static int   g_temp_text_capacity = 0;
+static int g_temp_text_count = 0;
+static int g_temp_text_capacity = 0;
 
 static void ensure_temp_text_capacity(int needed) {
     if (g_temp_text_capacity >= needed) return;
     int newcap = g_temp_text_capacity ? g_temp_text_capacity * 2 : 256;
     while (newcap < needed) newcap *= 2;
-    g_temp_text_buffers = (char**)realloc(g_temp_text_buffers, newcap * sizeof(char*));
+    g_temp_text_buffers = realloc(g_temp_text_buffers, newcap * sizeof(char*));
     g_temp_text_capacity = newcap;
 }
 
@@ -89,20 +99,63 @@ static void push_temp_text_buffer(char *buf) {
 }
 
 static void free_all_temp_text_buffers(void) {
-    for (int i = 0; i < g_temp_text_count; ++i) {
-        free(g_temp_text_buffers[i]);
-    }
+    for (int i = 0; i < g_temp_text_count; ++i) free(g_temp_text_buffers[i]);
     g_temp_text_count = 0;
-    // keep g_temp_text_buffers allocated for reuse to avoid repeated realloc/free
+    // keep buffer allocated for reuse
+}
+
+static void textline_init(TextLine *line) {
+    line->count = 0;
+    line->char_count = 0;
+}
+
+static void textline_flush(TextLine *line) {
+    if (line->count == 0) return;
+    render_text_elements(line->elements, line->count);
+    line->count = 0;
+    line->char_count = 0;
+}
+
+static void textline_push(TextLine *line, const char *src, int len, Clay_TextElementConfig *config) {
+    if (line->count >= 256) textline_flush(line);
+
+    // Allocate a temp copy of the string
+    char *buf = malloc(len + 1);
+    memcpy(buf, src, len);
+    buf[len] = '\0';
+    push_temp_text_buffer(buf);
+
+    // Register text element
+    line->elements[line->count].string = make_clay_string(buf, len);
+    line->elements[line->count].config = config;
+    line->count++;
+    line->char_count += len;
+
+    // Flush line if full
+    if (line->char_count >= available_characters) textline_flush(line);
 }
 
 // ============================================================================
 // INIT FUNCTIONS
 // ============================================================================
 
+void init_font_styles(){
+    // Init font styles
+    font_body_regular = (Clay_TextElementConfig){ .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND };
+    font_body_italic = (Clay_TextElementConfig){ .fontId = FONT_ID_ITALIC, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND };
+    font_body_bold = (Clay_TextElementConfig){ .fontId = FONT_ID_BOLD, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND };
+    font_h1 = (Clay_TextElementConfig){ .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 14, .textColor = COLOR_FOREGROUND };
+    font_h2 = (Clay_TextElementConfig){ .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 12, .textColor = COLOR_FOREGROUND };
+    font_h3 = (Clay_TextElementConfig){ .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 6, .textColor = COLOR_FOREGROUND };
+    font_h4 = (Clay_TextElementConfig){ .fontId = FONT_ID_BOLD, .fontSize = base_font_size + 4, .textColor = COLOR_FOREGROUND };
+    font_h5 = (Clay_TextElementConfig){ .fontId = FONT_ID_ITALIC, .fontSize = base_font_size + 2, .textColor = COLOR_FOREGROUND };
+    inline_code = (Clay_TextElementConfig){ .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_BLUE };
+}
+
 void load_font(int id, char *font_path) {
-    g_fonts[id] = LoadFontEx(font_path, BASE_FONT_SIZE * 2, NULL, 0);
+    g_fonts[id] = LoadFontEx(font_path, base_font_size * 2, NULL, 0);
     SetTextureFilter(g_fonts[id].texture, TEXTURE_FILTER_BILINEAR);
+    init_font_styles();
 }
 
 void load_fonts(void) {
@@ -149,8 +202,10 @@ void init_clay(void) {
 }
 
 // ============================================================================
-// REUSABLE COMPONENTS
+// RENDERING AND REUSABLE COMPONENTS
 // ============================================================================
+
+void render_block(MarkdownNode *current_node);
 
 // Creates a Clay_String from a C string
 static inline Clay_String make_clay_string(char *text, long length) {
@@ -177,35 +232,115 @@ static void render_text_elements(TextElement *line, int count) {
     }
 }
 
-// Inserta un fragmento de texto en la línea actual.
-// Si la línea se llenó, la renderiza y vacía. No libera buffers aquí.
-static void push_text_segment(
-    TextElement *line,
-    int *index,
-    int *char_count,
-    const char *src,
-    int len,
-    Clay_TextElementConfig *config
-) {
-    // Copiar el fragmento a un buffer temporal
-    char *buf = (char*)malloc((len + 1));
-    memcpy(buf, src, len);
-    buf[len] = '\0';
+static void render_paragraph(MarkdownNode *node) {
+    TextLine line;
+    textline_init(&line);
 
-    // Registrar buffer para liberar después del render
-    push_temp_text_buffer(buf);
+    for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
+        const char *text = NULL;
+        int len = 0;
+        Clay_TextElementConfig *config = &font_body_regular;
 
-    line[*index].string = make_clay_string(buf, len);
-    line[*index].config = config;
-    (*index)++;
-    (*char_count) += len;
+        switch (child->type) {
+        case NODE_TEXT:
+            if (child->value.text.type == MD_TEXT_SOFTBR) {
+                textline_push(&line, " ", 1, &font_body_regular);
+                continue;
+            }
+            text = child->value.text.text;
+            len = child->value.text.size;
+            break;
 
-    // Si la línea se llenó, renderiza y reinicia contadores (no liberar aquí)
-    if (*char_count >= available_characters) {
-        render_text_elements(line, *index);
-        *index = 0;
-        *char_count = 0;
+        case NODE_SPAN:
+            switch (child->value.span.type) {
+            case MD_SPAN_EM:    config = &font_body_italic; break;
+            case MD_SPAN_STRONG: config = &font_body_bold; break;
+            case MD_SPAN_CODE:   config = &inline_code; break;
+            default: continue;
+            }
+            if (child->first_child && child->first_child->type == NODE_TEXT) {
+                text = child->first_child->value.text.text;
+                len = child->first_child->value.text.size;
+            } else continue;
+            break;
+
+        default:
+            continue;
+        }
+
+        int consumed = 0;
+        while (consumed < len) {
+            int space = available_characters - line.char_count;
+            if (space <= 0) textline_flush(&line);
+
+            int remaining = len - consumed;
+            int take = remaining > space ? space : remaining;
+            textline_push(&line, text + consumed, take, config);
+            consumed += take;
+        }
     }
+
+    textline_flush(&line);
+}
+
+static void render_heading(MarkdownNode *node) {
+    MD_BLOCK_H_DETAIL *detail = (MD_BLOCK_H_DETAIL*) node->value.block.detail;
+    unsigned level = detail->level;
+    char *text = node->first_child->value.text.text;
+    int size = node->first_child->value.text.size;
+
+    Clay_TextElementConfig *cfg =
+        level == 1 ? &font_h1 :
+        level == 2 ? &font_h2 :
+        level == 3 ? &font_h3 :
+        level == 4 ? &font_h4 : &font_h5;
+
+    CLAY_TEXT(make_clay_string(text, size), cfg);
+}
+
+static void render_hr(void) {
+    CLAY_AUTO_ID({
+        .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_characters * 8.75) },
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+        .border = { .width = { .top = 1 }, .color = COLOR_DIM }
+    }) {};
+}
+
+static void render_code_block(MarkdownNode *node) {
+    CLAY_AUTO_ID({
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_characters * 8.75) },
+            .padding = { 16, 16, 16, 16 }
+        },
+        .cornerRadius = 4,
+        .backgroundColor = COLOR_DIM,
+        .clip = { .vertical = true, .horizontal = true, .childOffset = Clay_GetScrollOffset() }
+    }) {
+        for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
+            CLAY_TEXT(make_clay_string(child->value.text.text, child->value.text.size), &font_body_regular);
+        }
+    };
+}
+
+static void render_quote_block(MarkdownNode *node) {
+    CLAY_AUTO_ID({
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_characters * 8.75) },
+            .padding = { 16, 16, 16, 16 }
+        },
+        .cornerRadius = 4,
+        .backgroundColor = COLOR_DIM,
+        .clip = { .vertical = true, .horizontal = true, .childOffset = Clay_GetScrollOffset() }
+    }) {
+        for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
+            render_block(child);
+        }
+    };
 }
 
 void render_block(MarkdownNode *current_node) {
@@ -218,192 +353,13 @@ void render_block(MarkdownNode *current_node) {
         },
         .backgroundColor = COLOR_BACKGROUND,
     }) {
-        MarkdownNode *node = current_node;
-        int node_type = node->value.block.type;
-
-        switch (node_type) {
-        case MD_BLOCK_P: {
-            TextElement line[256];
-            // Ensure a clean slate
-            for (int i = 0; i < 256; ++i) {
-                line[i].string.chars = NULL;
-                line[i].string.length = 0;
-                line[i].string.isStaticallyAllocated = true;
-                line[i].config = &font_body_regular;
-            }
-            int index = 0;
-            int char_count = 0;
-
-            MarkdownNode *aux = node->first_child;
-            while (aux) {
-                const char *string = NULL;
-                int size = 0;
-                Clay_TextElementConfig *config = &font_body_regular;
-
-                switch (aux->type) {
-                case NODE_TEXT:
-                    // Insert a single space when encountering a soft break
-                    if (aux->value.text.type == MD_TEXT_SOFTBR) {
-                        const char space_char = ' ';
-                        push_text_segment(line, &index, &char_count, &space_char, 1, &font_body_regular);
-                        aux = aux->next_sibling;
-                        continue;
-                    }
-                    string = aux->value.text.text;
-                    size = aux->value.text.size;
-                    config = &font_body_regular;
-                    break;
-
-                case NODE_SPAN:
-                    // Map span types to configs
-                    switch (aux->value.span.type) {
-                    case MD_SPAN_EM:
-                        config = &font_body_italic;
-                        break;
-                    case MD_SPAN_STRONG:
-                        config = &font_body_bold;
-                        break;
-                    case MD_SPAN_CODE:
-                        config = &inline_code;
-                        break;
-                    default:
-                        aux = aux->next_sibling;
-                        continue;
-                    }
-                    if (aux->first_child && aux->first_child->type == NODE_TEXT) {
-                        string = aux->first_child->value.text.text;
-                        size = aux->first_child->value.text.size;
-                    } else {
-                        aux = aux->next_sibling;
-                        continue;
-                    }
-                    break;
-
-                default:
-                    aux = aux->next_sibling;
-                    continue;
-                }
-
-                int consumed = 0;
-                while (consumed < size) {
-                    // If no space, flush current line
-                    int space = available_characters - char_count;
-                    if (space <= 0) {
-                        if (index > 0) {
-                            render_text_elements(line, index);
-                            index = 0;
-                            char_count = 0;
-                        }
-                        space = available_characters;
-                    }
-
-                    int remaining = size - consumed;
-                    int take = remaining > space ? space : remaining;
-                    push_text_segment(line, &index, &char_count, string + consumed, take, config);
-                    consumed += take;
-                }
-
-                aux = aux->next_sibling;
-            }
-
-            // Render any remaining elements in the last line
-            if (index > 0) {
-                render_text_elements(line, index);
-            }
-            break;
-            // TODO: move to its own function
-            // TODO: figure out how to make layouts without this kind of recursion and with
-            // more flexibility for this kind of operations.
-        }
-
-        case MD_BLOCK_H: {
-            MD_BLOCK_H_DETAIL *detail = (MD_BLOCK_H_DETAIL*) node->value.block.detail;
-            unsigned level = detail->level;
-            char *text = node->first_child->value.text.text;
-            int size = node->first_child->value.text.size;
-            if (level == 1) {
-                CLAY_TEXT(make_clay_string(text, size), &font_h1);
-            } else if (level == 2) {
-                CLAY_TEXT(make_clay_string(text, size), &font_h2);
-            } else if (level == 3) {
-                CLAY_TEXT(make_clay_string(text, size), &font_h3);
-            } else if (level == 4) {
-                CLAY_TEXT(make_clay_string(text, size), &font_h4);
-            } else {
-                CLAY_TEXT(make_clay_string(text, size), &font_h5);
-            }
-            break;
-        }
-
-        case MD_BLOCK_HR: {
-            CLAY_AUTO_ID({
-                .layout = {
-                    .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                    // TODO: darle nombre a estos magic numbers
-                    .sizing = { .width = CLAY_SIZING_GROW(0, available_characters * 8.75) }
-                },
-                .backgroundColor = COLOR_BACKGROUND,
-                .border = { .width = { .top = 1 }, .color = COLOR_DIM }
-            }) {};
-            break;
-        }
-
-        case MD_BLOCK_CODE: {
-            CLAY_AUTO_ID({
-                .layout = {
-                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    // TODO: darle nombre a estos magic numbers
-                    .sizing = { .width = CLAY_SIZING_GROW(0, available_characters * 8.75) },
-                    .padding = { 16, 16, 16, 16 }
-                },
-                .cornerRadius = 4,
-                .backgroundColor = COLOR_DIM,
-                .clip = {
-                    .vertical = true,
-                    .horizontal = true,
-                    .childOffset = Clay_GetScrollOffset()
-                }
-            }) {
-                MarkdownNode *child = node->first_child;
-                while(child) {
-                    char *text = child->value.text.text;
-                    unsigned size = child->value.text.size;
-                    CLAY_TEXT(make_clay_string(text, size), &font_body_regular);
-                    child = child->next_sibling;
-                }
-            };
-            break;
-        }
-
-        case MD_BLOCK_QUOTE: {
-            CLAY_AUTO_ID({
-                .layout = {
-                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                    // TODO: darle nombre a estos magic numbers
-                    .sizing = { .width = CLAY_SIZING_GROW(0, available_characters * 8.75) },
-                    .padding = { 16, 16, 16, 16 }
-                },
-                .cornerRadius = 4,
-                .backgroundColor = COLOR_DIM,
-                .clip = {
-                    .vertical = true,
-                    .horizontal = true,
-                    .childOffset = Clay_GetScrollOffset()
-                }
-            }) {
-                if (node->first_child) {
-                    node = node->first_child;
-                    while (node) {
-                        render_block(node);
-                        node = node->next_sibling;
-                    }
-                }
-            }
-            break;
-        }
-
-        default:
-            break;
+        switch (current_node->value.block.type) {
+        case MD_BLOCK_P:      render_paragraph(current_node); break;
+        case MD_BLOCK_H:      render_heading(current_node);   break;
+        case MD_BLOCK_HR:     render_hr();                     break;
+        case MD_BLOCK_CODE:   render_code_block(current_node);break;
+        case MD_BLOCK_QUOTE:  render_quote_block(current_node);break;
+        default: break;
         }
     }
 }
@@ -467,7 +423,7 @@ void update_frame(void) {
     });
 
     // Calculate how many characters can be displayed in a single line.
-    available_characters = (int) (GetScreenWidth() / 12); // Half the regular font size (24)
+    available_characters = (int) (GetScreenWidth() / (base_font_size / 2)); // Half the regular font size (24)
 
     // Update scroll containers
     Vector2 mousePosition = GetMousePosition();
@@ -502,6 +458,18 @@ void update_frame(void) {
 
 void start_main_loop() {
     while(!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_Q)) {
+            break;
+        }
+        if (IsKeyPressed(KEY_EQUAL)) {
+            base_font_size += 4;
+            init_font_styles();
+        }
+        if (IsKeyPressed(KEY_MINUS)) {
+            base_font_size -= 4;
+            init_font_styles();
+        }
         update_frame();
     }
+    CloseWindow();
 }
