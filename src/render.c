@@ -44,9 +44,8 @@ const uint32_t FONT_ID_ITALIC           = 1;
 const uint32_t FONT_ID_SEMIBOLD         = 2;
 const uint32_t FONT_ID_SEMIBOLD_ITALIC  = 3;
 const uint32_t FONT_ID_BOLD             = 4;
-const uint32_t FONT_ID_BOLDITALIC       = 5;
-const uint32_t FONT_ID_EXTRABOLD        = 6;
-Font g_fonts[7];
+const uint32_t FONT_ID_EXTRABOLD        = 5;
+Font g_fonts[6];
 
 const int BASE_FONT_SIZE = 24;
 
@@ -112,7 +111,6 @@ void load_fonts(void) {
     load_font(FONT_ID_SEMIBOLD, "resources/NotoSans-SemiBold.ttf");
     load_font(FONT_ID_SEMIBOLD_ITALIC, "resources/NotoSans-SemiBoldItalic.ttf");
     load_font(FONT_ID_BOLD, "resources/NotoSans-Bold.ttf");
-    load_font(FONT_ID_BOLDITALIC, "resources/NotoSans-BoldItalic.ttf");
     load_font(FONT_ID_EXTRABOLD, "resources/NotoSans-ExtraBold.ttf");
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
@@ -131,7 +129,7 @@ void handle_clay_errors(Clay_ErrorData error_data) {
 }
 
 void init_clay(void) {
-    /*SetTraceLogLevel(LOG_NONE); */
+    SetTraceLogLevel(LOG_WARNING); 
 
     uint64_t total_memory_size = Clay_MinMemorySize();
     Clay_Arena clay_memory = Clay_CreateArenaWithCapacityAndMemory(total_memory_size,

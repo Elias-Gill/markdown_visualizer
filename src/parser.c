@@ -17,7 +17,7 @@ static void start_text_accumulation(void) {
     parsing_code_block = true;
 
     accumulated_text_node = malloc(sizeof(MarkdownNode));
-    if (!accumulated_text_node) { exit(1) } ;
+    if (!accumulated_text_node) { exit(1); }
 
     accumulated_text_node->type = NODE_TEXT;
     accumulated_text_node->value.text.type = MD_TEXT_NORMAL;
