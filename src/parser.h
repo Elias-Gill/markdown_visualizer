@@ -38,7 +38,7 @@ typedef struct {
 } BlockNode;
 
 // ------------------------------
-//  Nodo de árbol
+//  Tree node
 // ------------------------------
 
 typedef struct MarkdownNode {
@@ -49,9 +49,9 @@ typedef struct MarkdownNode {
         BlockNode block;
     } value;
 
-    struct MarkdownNode *parent;       // nodo padre
-    struct MarkdownNode *first_child;  // primer hijo
-    struct MarkdownNode *next_sibling; // siguiente hermano
+    struct MarkdownNode *parent;
+    struct MarkdownNode *first_child;
+    struct MarkdownNode *next_sibling;
 } MarkdownNode;
 
 // ------------------------------
@@ -61,7 +61,6 @@ typedef struct MarkdownNode {
 int parse_markdown(const char* text);
 void free_tree(MarkdownNode *node);
 void print_tree(const MarkdownNode *node, int indent);
-MarkdownNode *next_node(MarkdownNode *parent); // devuelve el primer hijo
-MarkdownNode *get_root_node(void);             // devuelve la raíz del documento
+MarkdownNode *get_root_node(void);  // Returns the root node
 
 #endif // PARSER_H

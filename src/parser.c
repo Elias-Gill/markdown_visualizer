@@ -17,7 +17,9 @@ static void start_text_accumulation(void) {
     parsing_code_block = true;
 
     accumulated_text_node = malloc(sizeof(MarkdownNode));
-    if (!accumulated_text_node) { exit(1); }
+    if (!accumulated_text_node) {
+        exit(1);
+    }
 
     accumulated_text_node->type = NODE_TEXT;
     accumulated_text_node->value.text.type = MD_TEXT_NORMAL;
@@ -31,7 +33,7 @@ static void start_text_accumulation(void) {
 }
 
 static void accumulate_text(const MD_CHAR *text, MD_SIZE size) {
-    // old_size stores the stored buffer size including the terminating '\0' when present 
+    // old_size stores the stored buffer size including the terminating '\0' when present
     MD_SIZE old_size = accumulated_text_node->value.text.size;
     MD_SIZE old_len  = (old_size > 0) ? old_size - 1 : 0; // length without '\0'
 
@@ -88,7 +90,7 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 // ------------------------------
 //  MD4C Callbacks
 // ------------------------------
-// NOTE: MD4C does not allocate data for most of detail structs, so we need to 
+// NOTE: MD4C does not allocate data for most of detail structs, so we need to
 // handle this allocation manually to be able to use this data on our program.
 
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
@@ -203,11 +205,6 @@ int parse_markdown(const char* text) {
 // ------------------------------
 //  Tree traverse operations API
 // ------------------------------
-
-MarkdownNode *next_node(MarkdownNode *parent) {
-    if (!parent) return NULL;
-    return parent->first_child;
-}
 
 MarkdownNode *get_root_node(void) {
     return root_node;

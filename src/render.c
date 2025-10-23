@@ -76,7 +76,7 @@ typedef struct {
     int char_count;
 } TextLine;
 
-// -- Utils forward declarations -- 
+// forward declarations
 static inline Clay_String make_clay_string(char *text, long length);
 static void render_text_elements(TextElement *line, int count);
 
@@ -86,9 +86,14 @@ static int g_temp_text_count = 0;
 static int g_temp_text_capacity = 0;
 
 static void ensure_temp_text_capacity(int needed) {
-    if (g_temp_text_capacity >= needed) return;
+    if (g_temp_text_capacity >= needed) {
+        return;
+    }
+    // Double capacity until we have enough space
     int newcap = g_temp_text_capacity ? g_temp_text_capacity * 2 : 256;
-    while (newcap < needed) newcap *= 2;
+    while (newcap < needed) {
+        newcap *= 2;
+    }
     g_temp_text_buffers = realloc(g_temp_text_buffers, newcap * sizeof(char*));
     g_temp_text_capacity = newcap;
 }
@@ -99,7 +104,9 @@ static void push_temp_text_buffer(char *buf) {
 }
 
 static void free_all_temp_text_buffers(void) {
-    for (int i = 0; i < g_temp_text_count; ++i) free(g_temp_text_buffers[i]);
+    for (int i = 0; i < g_temp_text_count; ++i) {
+        free(g_temp_text_buffers[i]);
+    }
     g_temp_text_count = 0;
     // keep buffer allocated for reuse
 }
@@ -110,14 +117,19 @@ static void textline_init(TextLine *line) {
 }
 
 static void textline_flush(TextLine *line) {
-    if (line->count == 0) return;
+    if (line->count == 0) {
+        return;
+    }
     render_text_elements(line->elements, line->count);
     line->count = 0;
     line->char_count = 0;
 }
 
-static void textline_push(TextLine *line, const char *src, int len, Clay_TextElementConfig *config) {
-    if (line->count >= 256) textline_flush(line);
+static void textline_push(TextLine *line, const char *src, int len,
+                          Clay_TextElementConfig *config) {
+    if (line->count >= 256) {
+        textline_flush(line);
+    }
 
     // Allocate a temp copy of the string
     char *buf = malloc(len + 1);
@@ -132,24 +144,47 @@ static void textline_push(TextLine *line, const char *src, int len, Clay_TextEle
     line->char_count += len;
 
     // Flush line if full
-    if (line->char_count >= available_characters) textline_flush(line);
+    if (line->char_count >= available_characters) {
+        textline_flush(line);
+    }
 }
 
 // ============================================================================
 // INIT FUNCTIONS
 // ============================================================================
 
-void init_font_styles(){
+void init_font_styles() {
     // Init font styles
-    font_body_regular = (Clay_TextElementConfig){ .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND };
-    font_body_italic = (Clay_TextElementConfig){ .fontId = FONT_ID_ITALIC, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND };
-    font_body_bold = (Clay_TextElementConfig){ .fontId = FONT_ID_BOLD, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND };
-    font_h1 = (Clay_TextElementConfig){ .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 14, .textColor = COLOR_FOREGROUND };
-    font_h2 = (Clay_TextElementConfig){ .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 12, .textColor = COLOR_FOREGROUND };
-    font_h3 = (Clay_TextElementConfig){ .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 6, .textColor = COLOR_FOREGROUND };
-    font_h4 = (Clay_TextElementConfig){ .fontId = FONT_ID_BOLD, .fontSize = base_font_size + 4, .textColor = COLOR_FOREGROUND };
-    font_h5 = (Clay_TextElementConfig){ .fontId = FONT_ID_ITALIC, .fontSize = base_font_size + 2, .textColor = COLOR_FOREGROUND };
-    inline_code = (Clay_TextElementConfig){ .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_BLUE };
+    font_body_regular = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND
+    };
+    font_body_italic = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_ITALIC, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND
+    };
+    font_body_bold = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_BOLD, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND
+    };
+    font_h1 = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 14,
+                                     .textColor = COLOR_FOREGROUND
+    };
+    font_h2 = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 12,
+                                     .textColor = COLOR_FOREGROUND
+    };
+    font_h3 = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_EXTRABOLD, .fontSize = base_font_size + 6,
+                                     .textColor = COLOR_FOREGROUND
+    };
+    font_h4 = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_BOLD, .fontSize = base_font_size + 4, .textColor = COLOR_FOREGROUND
+    };
+    font_h5 = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_ITALIC, .fontSize = base_font_size + 2, .textColor = COLOR_FOREGROUND
+    };
+    inline_code = (Clay_TextElementConfig) {
+        .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_BLUE
+    };
 }
 
 void load_font(int id, char *font_path) {
@@ -182,7 +217,7 @@ void handle_clay_errors(Clay_ErrorData error_data) {
 }
 
 void init_clay(void) {
-    SetTraceLogLevel(LOG_WARNING); 
+    SetTraceLogLevel(LOG_WARNING);
 
     uint64_t total_memory_size = Clay_MinMemorySize();
     Clay_Arena clay_memory = Clay_CreateArenaWithCapacityAndMemory(total_memory_size,
@@ -253,10 +288,17 @@ static void render_paragraph(MarkdownNode *node) {
 
         case NODE_SPAN:
             switch (child->value.span.type) {
-            case MD_SPAN_EM:    config = &font_body_italic; break;
-            case MD_SPAN_STRONG: config = &font_body_bold; break;
-            case MD_SPAN_CODE:   config = &inline_code; break;
-            default: continue;
+            case MD_SPAN_EM:
+                config = &font_body_italic;
+                break;
+            case MD_SPAN_STRONG:
+                config = &font_body_bold;
+                break;
+            case MD_SPAN_CODE:
+                config = &inline_code;
+                break;
+            default:
+                continue;
             }
             if (child->first_child && child->first_child->type == NODE_TEXT) {
                 text = child->first_child->value.text.text;
@@ -321,7 +363,8 @@ static void render_code_block(MarkdownNode *node) {
         .clip = { .vertical = true, .horizontal = true, .childOffset = Clay_GetScrollOffset() }
     }) {
         for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
-            CLAY_TEXT(make_clay_string(child->value.text.text, child->value.text.size), &font_body_regular);
+            CLAY_TEXT(make_clay_string(child->value.text.text, child->value.text.size),
+                      &font_body_regular);
         }
     };
 }
@@ -354,12 +397,23 @@ void render_block(MarkdownNode *current_node) {
         .backgroundColor = COLOR_BACKGROUND,
     }) {
         switch (current_node->value.block.type) {
-        case MD_BLOCK_P:      render_paragraph(current_node); break;
-        case MD_BLOCK_H:      render_heading(current_node);   break;
-        case MD_BLOCK_HR:     render_hr();                     break;
-        case MD_BLOCK_CODE:   render_code_block(current_node);break;
-        case MD_BLOCK_QUOTE:  render_quote_block(current_node);break;
-        default: break;
+        case MD_BLOCK_P:
+            render_paragraph(current_node);
+            break;
+        case MD_BLOCK_H:
+            render_heading(current_node);
+            break;
+        case MD_BLOCK_HR:
+            render_hr();
+            break;
+        case MD_BLOCK_CODE:
+            render_code_block(current_node);
+            break;
+        case MD_BLOCK_QUOTE:
+            render_quote_block(current_node);
+            break;
+        default:
+            break;
         }
     }
 }
@@ -423,7 +477,8 @@ void update_frame(void) {
     });
 
     // Calculate how many characters can be displayed in a single line.
-    available_characters = (int) (GetScreenWidth() / (base_font_size / 2)); // Half the regular font size (24)
+    available_characters = (int) (GetScreenWidth() / (base_font_size /
+                                  2)); // Half the regular font size (24)
 
     // Update scroll containers
     Vector2 mousePosition = GetMousePosition();
