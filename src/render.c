@@ -375,6 +375,33 @@ void render_block(MarkdownNode *current_node) {
             break;
         }
 
+        case MD_BLOCK_QUOTE: {
+            CLAY_AUTO_ID({
+                .layout = {
+                    .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                    // TODO: darle nombre a estos magic numbers
+                    .sizing = { .width = CLAY_SIZING_GROW(0, available_characters * 8.75) },
+                    .padding = { 16, 16, 16, 16 }
+                },
+                .cornerRadius = 4,
+                .backgroundColor = COLOR_DIM,
+                .clip = {
+                    .vertical = true,
+                    .horizontal = true,
+                    .childOffset = Clay_GetScrollOffset()
+                }
+            }) {
+                if (node->first_child) {
+                    node = node->first_child;
+                    while (node) {
+                        render_block(node);
+                        node = node->next_sibling;
+                    }
+                }
+            }
+            break;
+        }
+
         default:
             break;
         }

@@ -30,6 +30,17 @@ def aca_un_poco_de_codigo():
     return nada
 ```
 
+## Prueba de Citas
+
+> Algo de texto normal
+> ### Un mini titulo inside quotes
+>   - Una lista dentro del algo
+>   - Una lista dentro del algo
+>   - Una lista dentro del algo
+> > Nested encima quotes
+> **strong inside quote**
+>
+
 ## Prueba de caracteres hispanicos
 
 El niño pidió café con azúcar y una pequeña porción de piña fría, mientras
