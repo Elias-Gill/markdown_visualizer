@@ -155,10 +155,9 @@ void init_clay(void) {
 // ============================================================================
 
 // Creates a Clay_String from a C string
-static inline Clay_String make_clay_string(char *text, long length,
-        bool is_heap_allocated) {
+static inline Clay_String make_clay_string(char *text, long length) {
     return (Clay_String) {
-        .isStaticallyAllocated = !is_heap_allocated,
+        .isStaticallyAllocated = false,
         .length = length,
         .chars = text,
     };
@@ -198,7 +197,7 @@ static void push_text_segment(
     // Registrar buffer para liberar después del render
     push_temp_text_buffer(buf);
 
-    line[*index].string = make_clay_string(buf, len, true);
+    line[*index].string = make_clay_string(buf, len);
     line[*index].config = config;
     (*index)++;
     (*char_count) += len;
@@ -325,15 +324,15 @@ void render_block(MarkdownNode *current_node) {
             char *text = node->first_child->value.text.text;
             int size = node->first_child->value.text.size;
             if (level == 1) {
-                CLAY_TEXT(make_clay_string(text, size, true), &font_h1);
+                CLAY_TEXT(make_clay_string(text, size), &font_h1);
             } else if (level == 2) {
-                CLAY_TEXT(make_clay_string(text, size, true), &font_h2);
+                CLAY_TEXT(make_clay_string(text, size), &font_h2);
             } else if (level == 3) {
-                CLAY_TEXT(make_clay_string(text, size, true), &font_h3);
+                CLAY_TEXT(make_clay_string(text, size), &font_h3);
             } else if (level == 4) {
-                CLAY_TEXT(make_clay_string(text, size, true), &font_h4);
+                CLAY_TEXT(make_clay_string(text, size), &font_h4);
             } else {
-                CLAY_TEXT(make_clay_string(text, size, true), &font_h5);
+                CLAY_TEXT(make_clay_string(text, size), &font_h5);
             }
             break;
         }
@@ -370,8 +369,8 @@ void render_block(MarkdownNode *current_node) {
                 MarkdownNode *child = node->first_child;
                 while(child) {
                     char *text = child->value.text.text;
-                    int size = child->value.text.size;
-                    CLAY_TEXT(make_clay_string(text, size, true), &font_body_regular);
+                    unsigned size = child->value.text.size;
+                    CLAY_TEXT(make_clay_string(text, size), &font_body_regular);
                     child = child->next_sibling;
                 }
             };

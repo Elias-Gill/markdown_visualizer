@@ -10,13 +10,64 @@
 static MarkdownNode *root_node = NULL;
 static MarkdownNode *current_node = NULL;
 
+static bool parsing_code_block = false;
+static MarkdownNode *accumulated_text_node = NULL;
+
+static void start_text_accumulation(void) {
+    parsing_code_block = true;
+
+    accumulated_text_node = malloc(sizeof(MarkdownNode));
+    if (!accumulated_text_node) { exit(1) } ;
+
+    accumulated_text_node->type = NODE_TEXT;
+    accumulated_text_node->value.text.type = MD_TEXT_NORMAL;
+    accumulated_text_node->value.text.text = NULL;
+    accumulated_text_node->value.text.size = 0;
+
+    // ensure clean linkage
+    accumulated_text_node->parent = NULL;
+    accumulated_text_node->first_child = NULL;
+    accumulated_text_node->next_sibling = NULL;
+}
+
+static void accumulate_text(const MD_CHAR *text, MD_SIZE size) {
+    // old_size stores the stored buffer size including the terminating '\0' when present 
+    MD_SIZE old_size = accumulated_text_node->value.text.size;
+    MD_SIZE old_len  = (old_size > 0) ? old_size - 1 : 0; // length without '\0'
+
+    MD_SIZE new_len  = old_len + size; // new length without '\0'
+    MD_SIZE new_size = new_len + 1;    // include '\0'
+
+    MD_CHAR *old_text = accumulated_text_node->value.text.text;
+    MD_CHAR *new_text = malloc(sizeof(MD_CHAR) * new_size);
+
+    // copy existing content (if any)
+    if (old_text && old_len > 0) {
+        memcpy(new_text, old_text, old_len);
+    }
+
+    // append new chunk
+    if (size > 0) {
+        memcpy(new_text + old_len, text, size);
+    }
+    new_text[new_len] = '\0';
+
+    // replace buffer and free old
+    free(old_text);
+    accumulated_text_node->value.text.text = new_text;
+    accumulated_text_node->value.text.size = new_size;
+}
+
 // -------------------------------
 //  Node creation
 // -------------------------------
 
-static MarkdownNode *create_node(NodeType type) {
+static MarkdownNode *should_create_node(NodeType type) {
     MarkdownNode *node = malloc(sizeof(MarkdownNode));
-    if (!node) return NULL;
+    if (!node) {
+        printf("Cannot allocate heap memmory");
+        exit(1);
+    }
     memset(node, 0, sizeof(MarkdownNode));
     node->type = type;
     return node;
@@ -37,46 +88,56 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 // ------------------------------
 //  MD4C Callbacks
 // ------------------------------
+// NOTE: MD4C does not allocate data for most of detail structs, so we need to 
+// handle this allocation manually to be able to use this data on our program.
 
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
-    MarkdownNode *node = create_node(NODE_BLOCK);
-    if (!node) return -1;
+    MarkdownNode *node = should_create_node(NODE_BLOCK);
 
     node->value.block.type = type;
     node->value.block.userdata = userdata;
 
-    // Solo hacemos copia si es un encabezado (header)
+    // Cast and store the block element’s details on the heap
     if (type == MD_BLOCK_H && detail) {
         MD_BLOCK_H_DETAIL *copy = malloc(sizeof(MD_BLOCK_H_DETAIL));
-        if (!copy) return -1;  // chequeo simple de malloc
+        if (!copy) {
+            exit(1);
+        }
         *copy = *(MD_BLOCK_H_DETAIL*)detail;
         node->value.block.detail = copy;
+    } else if (type == MD_BLOCK_CODE) {
+        start_text_accumulation();
     } else {
-        node->value.block.detail = detail; // para otros bloques dejamos el puntero tal cual
+        // TODO: handle all the detail cases
+        node->value.block.detail = detail;
     }
 
-    // Insertamos en el árbol
-    if (!root_node)
+    // Insert node
+    if (!root_node) {
         root_node = node;
-    else
+    } else {
         insert_child_node(current_node, node);
+    }
 
-    current_node = node; // descendemos
+    current_node = node; // descend
 
     return 0;
 }
 
 static int on_leave_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
-    if (!current_node) return -1;
-    // Ignore the rest of function parameters because the detais are actually passed
-    // on the oppening block
-    current_node = current_node->parent; // ascendemos
+    if (type == MD_BLOCK_CODE) {
+        parsing_code_block = false;
+        insert_child_node(current_node, accumulated_text_node);
+    }
+    // Ignore the remaining function parameters, as the details are actually passed
+    // in the opening block.
+    current_node = current_node->parent; // ascend
     return 0;
 }
 
 static int on_enter_span(MD_SPANTYPE type, void *detail, void *userdata) {
-    MarkdownNode *node = create_node(NODE_SPAN);
-    if (!node) return -1;
+    MarkdownNode *node = should_create_node(NODE_SPAN);
+
     node->value.span.type = type;
     node->value.span.detail = detail;
     node->value.span.userdata = userdata;
@@ -87,27 +148,25 @@ static int on_enter_span(MD_SPANTYPE type, void *detail, void *userdata) {
 }
 
 static int on_leave_span(MD_SPANTYPE type, void *detail, void *userdata) {
-    if (!current_node) return -1;
     current_node->value.span.type = type;
-    current_node->value.span.detail = detail;
-    current_node->value.span.userdata = userdata;
-
+    // Same as on_leave_block, whe can ignore the parameters as the details are passed in the
+    // opening block.
     current_node = current_node->parent;
     return 0;
 }
 
 static int on_text(MD_TEXTTYPE type, const MD_CHAR *text, MD_SIZE size, void *userdata) {
-    MarkdownNode *node = create_node(NODE_TEXT);
-    if (!node) return -1;
+    if (parsing_code_block) {
+        accumulate_text(text, size);
+        return 0;
+    }
+
+    MarkdownNode *node = should_create_node(NODE_TEXT);
     node->value.text.type = type;
     node->value.text.size = size;
     node->value.text.userdata = userdata;
 
     node->value.text.text = malloc(size + 1);
-    if (!node->value.text.text) {
-        free(node);
-        return -1;
-    }
     memcpy(node->value.text.text, text, size);
     node->value.text.text[size] = '\0';
 
@@ -142,7 +201,7 @@ int parse_markdown(const char* text) {
 }
 
 // ------------------------------
-//  Tree operation methods
+//  Tree traverse operations API
 // ------------------------------
 
 MarkdownNode *next_node(MarkdownNode *parent) {
