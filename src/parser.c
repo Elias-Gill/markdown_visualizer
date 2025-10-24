@@ -90,8 +90,8 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 // ------------------------------
 //  MD4C Callbacks
 // ------------------------------
-// NOTE: MD4C does not allocate data for most of detail structs, so we need to
-// handle this allocation manually to be able to use this data on our program.
+// NOTE: MD4C does not allocate heap memmory for most of detail structs, so we need to
+// handle this allocation manually.
 
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
     MarkdownNode *node = should_create_node(NODE_BLOCK);
@@ -213,17 +213,19 @@ MarkdownNode *get_root_node(void) {
 void free_tree(MarkdownNode *node) {
     if (!node) return;
 
-    // liberar hijos
     MarkdownNode *child = node->first_child;
     while (child) {
         MarkdownNode *next = child->next_sibling;
         free_tree(child);
         child = next;
     }
-
-    // liberar texto heap
     if (node->type == NODE_TEXT && node->value.text.text) {
         free(node->value.text.text);
+    }
+    if (node->type == NODE_BLOCK && 
+        node->value.block.type == MD_BLOCK_H && 
+        node->value.block.detail) {
+        free(node->value.block.detail);
     }
 
     free(node);
