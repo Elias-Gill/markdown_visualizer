@@ -139,56 +139,50 @@ static int GetNextUTF8Char(const char* text, int* index, int length) {
 }
 
 static inline Clay_Dimensions Raylib_MeasureText(Clay_StringSlice text,
-        Clay_TextElementConfig *config, void *userData) {
-    Clay_Dimensions textSize = { 0 };
-    float maxTextWidth = 0.0f;
-    float lineTextWidth = 0;
-    int lineCharCount = 0;
-    float textHeight = config->fontSize;
-    Font* fonts = (Font*)userData;
-    Font fontToUse = fonts[config->fontId];
+        Clay_TextElementConfig *config, void *userData) 
+{
+    Font *fonts = (Font *)userData;
+    Font font = fonts[config->fontId];
+    if (!font.glyphs) font = GetFontDefault();
 
-    if (!fontToUse.glyphs) fontToUse = GetFontDefault();
+    const float scale = config->fontSize / (float)font.baseSize;
+    const float spacing = config->letterSpacing * scale;
 
-    float scaleFactor = config->fontSize / (float)fontToUse.baseSize;
+    float maxWidth = 0.0f;
+    float lineWidth = 0.0f;
+    float height = config->fontSize;
+
     int index = 0;
+    const int len = text.length;
 
-    while (index < text.length) {
-        int codepoint = GetNextUTF8Char(text.chars, &index, text.length);
+    while (index < len) {
+        int codepoint = GetNextUTF8Char(text.chars, &index, len);
         if (codepoint == -1) break;
 
         if (codepoint == '\n') {
-            maxTextWidth = fmax(maxTextWidth, lineTextWidth);
-            lineTextWidth = 0;
-            lineCharCount = 0;
-            textHeight += config->fontSize;
+            if (lineWidth > maxWidth) maxWidth = lineWidth;
+            lineWidth = 0.0f;
+            height += config->fontSize;
             continue;
         }
 
-        int glyphIndex = GetGlyphIndex(fontToUse, codepoint);
-        float advance = 0;
+        int glyphIndex = GetGlyphIndex(font, codepoint);
+        float adv = 0.0f;
 
-        if (glyphIndex >= 0 && glyphIndex < fontToUse.glyphCount) {
-            advance = fontToUse.glyphs[glyphIndex].advanceX;
-            if (advance == 0) {
-                Rectangle rec = fontToUse.recs[glyphIndex];
-                advance = rec.width + fontToUse.glyphs[glyphIndex].offsetX;
-            }
+        if (glyphIndex >= 0 && glyphIndex < font.glyphCount) {
+            adv = font.glyphs[glyphIndex].advanceX;
+            if (adv == 0.0f)
+                adv = font.recs[glyphIndex].width + font.glyphs[glyphIndex].offsetX;
         } else {
-            // Fallback: ancho aproximado para glifos no cargados
-            advance = fontToUse.baseSize * 0.8f;
+            adv = font.baseSize * 0.8f; // ancho estimado fallback
         }
 
-        lineTextWidth += advance * scaleFactor;
-        lineCharCount++;
+        lineWidth += adv * scale + spacing;
     }
 
-    maxTextWidth = fmax(maxTextWidth, lineTextWidth);
-    textSize.width = maxTextWidth + (lineCharCount ? (lineCharCount - 1) *
-                                     config->letterSpacing : 0);
-    textSize.height = textHeight;
+    if (lineWidth > maxWidth) maxWidth = lineWidth;
 
-    return textSize;
+    return (Clay_Dimensions){ maxWidth, height };
 }
 
 void Clay_Raylib_Initialize(int width, int height, const char *title,

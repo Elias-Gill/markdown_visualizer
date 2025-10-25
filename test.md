@@ -47,10 +47,10 @@ def aca_un_poco_de_codigo():
 ## Prueba de caracteres hispanicos
 
 El niño pidió café con azúcar y una pequeña porción de piña fría, mientras
-observaba cómo el sol se ocultaba detrás de las montañas. “¿Qué día es hoy?”,
+observaba cómo el sol se ocultaba detrás de las montañas. "¿Qué día es hoy?",
 preguntó con curiosidad, sin notar que el reloj marcaba ya las ocho y cuarto. A
 lo lejos, una canción decía: ¡Qué alegría volver a casa después de tanto
-tiempo! —y en ese instante— todo pareció detenerse: el aire, la luz, y hasta el
+tiempo! — y en ese instante— todo pareció detenerse: el aire, la luz, y hasta el
 murmullo del río.
 
 ## Prueba de emojis

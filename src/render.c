@@ -192,26 +192,45 @@ void reset_font_styles() {
     };
 }
 
-void load_emoji_font(int id, char *font_path) {
+void load_emoji_font(int id, const char *font_path) {
     FT_Library ft;
     FT_Face face;
     FT_Init_FreeType(&ft);
     FT_New_Face(ft, font_path, 0, &face);
 
-    int size = base_font_size * 4;
+    int size = base_font_size * 2;
     FT_Set_Pixel_Sizes(face, 0, size);
 
-    int count = 0x110000;
-    int *codepoints = (int *)malloc(sizeof(int) * count);
+    static const struct { int start, end; } emoji_ranges[] = {
+        {0x1F300, 0x1F5FF},
+        {0x1F600, 0x1F64F},
+        {0x1F680, 0x1F6FF},
+        {0x1F700, 0x1F77F},
+        {0x1F780, 0x1F7FF},
+        {0x1F800, 0x1F8FF},
+        {0x1F900, 0x1F9FF},
+        {0x1FA00, 0x1FAFF},
+        {0x2600,  0x26FF}, 
+        {0x2700,  0x27BF}, 
+    };
+
+    int maxCount = 0;
+    for (int i = 0; i < (int)(sizeof(emoji_ranges) / sizeof(emoji_ranges[0])); i++)
+        maxCount += (emoji_ranges[i].end - emoji_ranges[i].start + 1);
+
+    int *codepoints = (int *)malloc(sizeof(int) * maxCount);
     int valid = 0;
 
-    for (int i = 0; i < count; i++) {
-        if (FT_Get_Char_Index(face, i)) codepoints[valid++] = i;
+    for (int i = 0; i < (int)(sizeof(emoji_ranges) / sizeof(emoji_ranges[0])); i++) {
+        for (int cp = emoji_ranges[i].start; cp <= emoji_ranges[i].end; cp++) {
+            if (FT_Get_Char_Index(face, cp))
+                codepoints[valid++] = cp;
+        }
     }
 
     g_fonts[id] = LoadFontEx(font_path, size, codepoints, valid);
-    free(codepoints);
 
+    free(codepoints);
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
 
@@ -219,8 +238,58 @@ void load_emoji_font(int id, char *font_path) {
     reset_font_styles();
 }
 
-void load_font(int id, char *font_path) {
-    g_fonts[id] = LoadFontEx(font_path, base_font_size * 2, NULL, 0);
+void load_font(int id, const char *font_path) {
+    FT_Library ft;
+    FT_Face face;
+    FT_Init_FreeType(&ft);
+    FT_New_Face(ft, font_path, 0, &face);
+
+    int size = base_font_size * 2;
+    FT_Set_Pixel_Sizes(face, 0, size);
+
+    // Rangos básicos y extendidos latinos
+    static const struct { int start, end; } latin_ranges[] = {
+        {0x0020, 0x007E},   // ASCII
+        {0x00A0, 0x00FF},   // Latin-1 Supplement
+        {0x0100, 0x017F},   // Latin Extended-A
+        {0x0180, 0x024F},   // Latin Extended-B
+    };
+
+    int maxCount = 0;
+    for (int i = 0; i < (int)(sizeof(latin_ranges)/sizeof(latin_ranges[0])); i++)
+        maxCount += (latin_ranges[i].end - latin_ranges[i].start + 1);
+
+    int *codepoints = (int *)malloc(sizeof(int) * maxCount);
+    int valid = 0;
+
+    // Agregar todos los codepoints de los rangos
+    for (int i = 0; i < (int)(sizeof(latin_ranges)/sizeof(latin_ranges[0])); i++) {
+        for (int cp = latin_ranges[i].start; cp <= latin_ranges[i].end; cp++) {
+            if (FT_Get_Char_Index(face, cp))
+                codepoints[valid++] = cp;
+        }
+    }
+
+    // Asegurar los precompuestos comunes (áéíóúñ ÁÉÍÓÚÑ)
+    static const int special[] = {
+        0x00E1,0x00E9,0x00ED,0x00F3,0x00FA,0x00F1,  // minúsculas
+        0x00C1,0x00C9,0x00CD,0x00D3,0x00DA,0x00D1   // mayúsculas
+    };
+    for (size_t k = 0; k < sizeof(special)/sizeof(special[0]); k++) {
+        int cp = special[k];
+        if (FT_Get_Char_Index(face, cp)) {
+            int already = 0;
+            for (int t = 0; t < valid; t++) if (codepoints[t] == cp) { already = 1; break; }
+            if (!already) codepoints[valid++] = cp;
+        }
+    }
+
+    g_fonts[id] = LoadFontEx(font_path, size, codepoints, valid);
+
+    free(codepoints);
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
+
     SetTextureFilter(g_fonts[id].texture, TEXTURE_FILTER_BILINEAR);
     reset_font_styles();
 }
