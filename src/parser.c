@@ -222,9 +222,9 @@ void free_tree(MarkdownNode *node) {
     if (node->type == NODE_TEXT && node->value.text.text) {
         free(node->value.text.text);
     }
-    if (node->type == NODE_BLOCK && 
-        node->value.block.type == MD_BLOCK_H && 
-        node->value.block.detail) {
+    if (node->type == NODE_BLOCK &&
+            node->value.block.type == MD_BLOCK_H &&
+            node->value.block.detail) {
         free(node->value.block.detail);
     }
 

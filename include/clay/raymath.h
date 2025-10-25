@@ -55,28 +55,28 @@
 #define RAYMATH_H
 
 #if defined(RAYMATH_IMPLEMENTATION) && defined(RAYMATH_STATIC_INLINE)
-    #error "Specifying both RAYMATH_IMPLEMENTATION and RAYMATH_STATIC_INLINE is contradictory"
+#error "Specifying both RAYMATH_IMPLEMENTATION and RAYMATH_STATIC_INLINE is contradictory"
 #endif
 
 // Function specifiers definition
 #if defined(RAYMATH_IMPLEMENTATION)
-    #if defined(_WIN32) && defined(BUILD_LIBTYPE_SHARED)
-        #define RMAPI __declspec(dllexport) extern inline // We are building raylib as a Win32 shared library (.dll)
-    #elif defined(BUILD_LIBTYPE_SHARED)
-        #define RMAPI __attribute__((visibility("default"))) // We are building raylib as a Unix shared library (.so/.dylib)
-    #elif defined(_WIN32) && defined(USE_LIBTYPE_SHARED)
-        #define RMAPI __declspec(dllimport)         // We are using raylib as a Win32 shared library (.dll)
-    #else
-        #define RMAPI extern inline // Provide external definition
-    #endif
-#elif defined(RAYMATH_STATIC_INLINE)
-    #define RMAPI static inline // Functions may be inlined, no external out-of-line definition
+#if defined(_WIN32) && defined(BUILD_LIBTYPE_SHARED)
+#define RMAPI __declspec(dllexport) extern inline // We are building raylib as a Win32 shared library (.dll)
+#elif defined(BUILD_LIBTYPE_SHARED)
+#define RMAPI __attribute__((visibility("default"))) // We are building raylib as a Unix shared library (.so/.dylib)
+#elif defined(_WIN32) && defined(USE_LIBTYPE_SHARED)
+#define RMAPI __declspec(dllimport)         // We are using raylib as a Win32 shared library (.dll)
 #else
-    #if defined(__TINYC__)
-        #define RMAPI static inline // plain inline not supported by tinycc (See issue #435)
-    #else
-        #define RMAPI inline        // Functions may be inlined or external definition used
-    #endif
+#define RMAPI extern inline // Provide external definition
+#endif
+#elif defined(RAYMATH_STATIC_INLINE)
+#define RMAPI static inline // Functions may be inlined, no external out-of-line definition
+#else
+#if defined(__TINYC__)
+#define RMAPI static inline // plain inline not supported by tinycc (See issue #435)
+#else
+#define RMAPI inline        // Functions may be inlined or external definition used
+#endif
 #endif
 
 
@@ -84,29 +84,29 @@
 // Defines and Macros
 //----------------------------------------------------------------------------------
 #ifndef PI
-    #define PI 3.14159265358979323846f
+#define PI 3.14159265358979323846f
 #endif
 
 #ifndef EPSILON
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
 #ifndef DEG2RAD
-    #define DEG2RAD (PI/180.0f)
+#define DEG2RAD (PI/180.0f)
 #endif
 
 #ifndef RAD2DEG
-    #define RAD2DEG (180.0f/PI)
+#define RAD2DEG (180.0f/PI)
 #endif
 
 // Get float vector for Matrix
 #ifndef MatrixToFloat
-    #define MatrixToFloat(mat) (MatrixToFloatV(mat).v)
+#define MatrixToFloat(mat) (MatrixToFloatV(mat).v)
 #endif
 
 // Get float vector for Vector3
 #ifndef Vector3ToFloat
-    #define Vector3ToFloat(vec) (Vector3ToFloatV(vec).v)
+#define Vector3ToFloat(vec) (Vector3ToFloatV(vec).v)
 #endif
 
 //----------------------------------------------------------------------------------
@@ -201,9 +201,11 @@ RMAPI float Normalize(float value, float start, float end)
 }
 
 // Remap input value within input range to output range
-RMAPI float Remap(float value, float inputStart, float inputEnd, float outputStart, float outputEnd)
+RMAPI float Remap(float value, float inputStart, float inputEnd, float outputStart,
+                  float outputEnd)
 {
-    float result = (value - inputStart)/(inputEnd - inputStart)*(outputEnd - outputStart) + outputStart;
+    float result = (value - inputStart)/(inputEnd - inputStart)*(outputEnd - outputStart) +
+                   outputStart;
 
     return result;
 }
@@ -220,7 +222,7 @@ RMAPI float Wrap(float value, float min, float max)
 RMAPI int FloatEquals(float x, float y)
 {
 #if !defined(EPSILON)
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
     int result = (fabsf(x - y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(x), fabsf(y))));
@@ -479,7 +481,8 @@ RMAPI Vector2 Vector2MoveTowards(Vector2 v, Vector2 target, float maxDistance)
     float dy = target.y - v.y;
     float value = (dx*dx) + (dy*dy);
 
-    if ((value == 0) || ((maxDistance >= 0) && (value <= maxDistance*maxDistance))) return target;
+    if ((value == 0) || ((maxDistance >= 0)
+                         && (value <= maxDistance*maxDistance))) return target;
 
     float dist = sqrtf(value);
 
@@ -540,11 +543,12 @@ RMAPI Vector2 Vector2ClampValue(Vector2 v, float min, float max)
 RMAPI int Vector2Equals(Vector2 p, Vector2 q)
 {
 #if !defined(EPSILON)
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
-    int result = ((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x))))) &&
-                  ((fabsf(p.y - q.y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.y), fabsf(q.y)))));
+    int result = ((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x)))))
+                 &&
+                 ((fabsf(p.y - q.y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.y), fabsf(q.y)))));
 
     return result;
 }
@@ -866,9 +870,12 @@ RMAPI Vector3 Vector3RotateByQuaternion(Vector3 v, Quaternion q)
 {
     Vector3 result = { 0 };
 
-    result.x = v.x*(q.x*q.x + q.w*q.w - q.y*q.y - q.z*q.z) + v.y*(2*q.x*q.y - 2*q.w*q.z) + v.z*(2*q.x*q.z + 2*q.w*q.y);
-    result.y = v.x*(2*q.w*q.z + 2*q.x*q.y) + v.y*(q.w*q.w - q.x*q.x + q.y*q.y - q.z*q.z) + v.z*(-2*q.w*q.x + 2*q.y*q.z);
-    result.z = v.x*(-2*q.w*q.y + 2*q.x*q.z) + v.y*(2*q.w*q.x + 2*q.y*q.z)+ v.z*(q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z);
+    result.x = v.x*(q.x*q.x + q.w*q.w - q.y*q.y - q.z*q.z) + v.y*(2*q.x*q.y - 2*q.w*q.z) +
+               v.z*(2*q.x*q.z + 2*q.w*q.y);
+    result.y = v.x*(2*q.w*q.z + 2*q.x*q.y) + v.y*(q.w*q.w - q.x*q.x + q.y*q.y - q.z*q.z) +
+               v.z*(-2*q.w*q.x + 2*q.y*q.z);
+    result.z = v.x*(-2*q.w*q.y + 2*q.x*q.z) + v.y*(2*q.w*q.x + 2*q.y*q.z)+ v.z*
+               (q.w*q.w - q.x*q.x - q.y*q.y + q.z*q.z);
 
     return result;
 }
@@ -935,7 +942,8 @@ RMAPI Vector3 Vector3MoveTowards(Vector3 v, Vector3 target, float maxDistance)
     float dz = target.z - v.z;
     float value = (dx*dx) + (dy*dy) + (dz*dz);
 
-    if ((value == 0) || ((maxDistance >= 0) && (value <= maxDistance*maxDistance))) return target;
+    if ((value == 0) || ((maxDistance >= 0)
+                         && (value <= maxDistance*maxDistance))) return target;
 
     float dist = sqrtf(value);
 
@@ -960,16 +968,20 @@ RMAPI Vector3 Vector3Lerp(Vector3 v1, Vector3 v2, float amount)
 
 // Calculate cubic hermite interpolation between two vectors and their tangents
 // as described in the GLTF 2.0 specification: https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#interpolation-cubic
-RMAPI Vector3 Vector3CubicHermite(Vector3 v1, Vector3 tangent1, Vector3 v2, Vector3 tangent2, float amount)
+RMAPI Vector3 Vector3CubicHermite(Vector3 v1, Vector3 tangent1, Vector3 v2,
+                                  Vector3 tangent2, float amount)
 {
     Vector3 result = { 0 };
 
     float amountPow2 = amount*amount;
     float amountPow3 = amount*amount*amount;
 
-    result.x = (2*amountPow3 - 3*amountPow2 + 1)*v1.x + (amountPow3 - 2*amountPow2 + amount)*tangent1.x + (-2*amountPow3 + 3*amountPow2)*v2.x + (amountPow3 - amountPow2)*tangent2.x;
-    result.y = (2*amountPow3 - 3*amountPow2 + 1)*v1.y + (amountPow3 - 2*amountPow2 + amount)*tangent1.y + (-2*amountPow3 + 3*amountPow2)*v2.y + (amountPow3 - amountPow2)*tangent2.y;
-    result.z = (2*amountPow3 - 3*amountPow2 + 1)*v1.z + (amountPow3 - 2*amountPow2 + amount)*tangent1.z + (-2*amountPow3 + 3*amountPow2)*v2.z + (amountPow3 - amountPow2)*tangent2.z;
+    result.x = (2*amountPow3 - 3*amountPow2 + 1)*v1.x + (amountPow3 - 2*amountPow2 + amount)
+               *tangent1.x + (-2*amountPow3 + 3*amountPow2)*v2.x + (amountPow3 - amountPow2)*tangent2.x;
+    result.y = (2*amountPow3 - 3*amountPow2 + 1)*v1.y + (amountPow3 - 2*amountPow2 + amount)
+               *tangent1.y + (-2*amountPow3 + 3*amountPow2)*v2.y + (amountPow3 - amountPow2)*tangent2.y;
+    result.z = (2*amountPow3 - 3*amountPow2 + 1)*v1.z + (amountPow3 - 2*amountPow2 + amount)
+               *tangent1.z + (-2*amountPow3 + 3*amountPow2)*v2.z + (amountPow3 - amountPow2)*tangent2.z;
 
     return result;
 }
@@ -1063,14 +1075,19 @@ RMAPI Vector3 Vector3Unproject(Vector3 source, Matrix projection, Matrix view)
         view.m12*projection.m0 + view.m13*projection.m4 + view.m14*projection.m8 + view.m15*projection.m12,
         view.m12*projection.m1 + view.m13*projection.m5 + view.m14*projection.m9 + view.m15*projection.m13,
         view.m12*projection.m2 + view.m13*projection.m6 + view.m14*projection.m10 + view.m15*projection.m14,
-        view.m12*projection.m3 + view.m13*projection.m7 + view.m14*projection.m11 + view.m15*projection.m15 };
+        view.m12*projection.m3 + view.m13*projection.m7 + view.m14*projection.m11 + view.m15*projection.m15
+    };
 
     // Calculate inverted matrix -> MatrixInvert(matViewProj);
     // Cache the matrix values (speed optimization)
-    float a00 = matViewProj.m0, a01 = matViewProj.m1, a02 = matViewProj.m2, a03 = matViewProj.m3;
-    float a10 = matViewProj.m4, a11 = matViewProj.m5, a12 = matViewProj.m6, a13 = matViewProj.m7;
-    float a20 = matViewProj.m8, a21 = matViewProj.m9, a22 = matViewProj.m10, a23 = matViewProj.m11;
-    float a30 = matViewProj.m12, a31 = matViewProj.m13, a32 = matViewProj.m14, a33 = matViewProj.m15;
+    float a00 = matViewProj.m0, a01 = matViewProj.m1, a02 = matViewProj.m2,
+                                                      a03 = matViewProj.m3;
+    float a10 = matViewProj.m4, a11 = matViewProj.m5, a12 = matViewProj.m6,
+                                                      a13 = matViewProj.m7;
+    float a20 = matViewProj.m8, a21 = matViewProj.m9, a22 = matViewProj.m10,
+                                                      a23 = matViewProj.m11;
+    float a30 = matViewProj.m12, a31 = matViewProj.m13, a32 = matViewProj.m14,
+                                                        a33 = matViewProj.m15;
 
     float b00 = a00*a11 - a01*a10;
     float b01 = a00*a12 - a02*a10;
@@ -1104,7 +1121,8 @@ RMAPI Vector3 Vector3Unproject(Vector3 source, Matrix projection, Matrix view)
         (-a10*b09 + a11*b07 - a12*b06)*invDet,
         (a00*b09 - a01*b07 + a02*b06)*invDet,
         (-a30*b03 + a31*b01 - a32*b00)*invDet,
-        (a20*b03 - a21*b01 + a22*b00)*invDet };
+        (a20*b03 - a21*b01 + a22*b00)*invDet
+    };
 
     // Create quaternion from source point
     Quaternion quat = { source.x, source.y, source.z, 1.0f };
@@ -1114,7 +1132,8 @@ RMAPI Vector3 Vector3Unproject(Vector3 source, Matrix projection, Matrix view)
         matViewProjInv.m0*quat.x + matViewProjInv.m4*quat.y + matViewProjInv.m8*quat.z + matViewProjInv.m12*quat.w,
         matViewProjInv.m1*quat.x + matViewProjInv.m5*quat.y + matViewProjInv.m9*quat.z + matViewProjInv.m13*quat.w,
         matViewProjInv.m2*quat.x + matViewProjInv.m6*quat.y + matViewProjInv.m10*quat.z + matViewProjInv.m14*quat.w,
-        matViewProjInv.m3*quat.x + matViewProjInv.m7*quat.y + matViewProjInv.m11*quat.z + matViewProjInv.m15*quat.w };
+        matViewProjInv.m3*quat.x + matViewProjInv.m7*quat.y + matViewProjInv.m11*quat.z + matViewProjInv.m15*quat.w
+    };
 
     // Normalized world points in vectors
     result.x = qtransformed.x/qtransformed.w;
@@ -1189,10 +1208,11 @@ RMAPI Vector3 Vector3ClampValue(Vector3 v, float min, float max)
 RMAPI int Vector3Equals(Vector3 p, Vector3 q)
 {
 #if !defined(EPSILON)
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
-    int result = ((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x))))) &&
+    int result = ((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x)))))
+                 &&
                  ((fabsf(p.y - q.y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.y), fabsf(q.y))))) &&
                  ((fabsf(p.z - q.z)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.z), fabsf(q.z)))));
 
@@ -1307,8 +1327,8 @@ RMAPI float Vector4DotProduct(Vector4 v1, Vector4 v2)
 RMAPI float Vector4Distance(Vector4 v1, Vector4 v2)
 {
     float result = sqrtf(
-        (v1.x - v2.x)*(v1.x - v2.x) + (v1.y - v2.y)*(v1.y - v2.y) +
-        (v1.z - v2.z)*(v1.z - v2.z) + (v1.w - v2.w)*(v1.w - v2.w));
+                       (v1.x - v2.x)*(v1.x - v2.x) + (v1.y - v2.y)*(v1.y - v2.y) +
+                       (v1.z - v2.z)*(v1.z - v2.z) + (v1.w - v2.w)*(v1.w - v2.w));
     return result;
 }
 
@@ -1417,7 +1437,8 @@ RMAPI Vector4 Vector4MoveTowards(Vector4 v, Vector4 target, float maxDistance)
     float dw = target.w - v.w;
     float value = (dx*dx) + (dy*dy) + (dz*dz) + (dw*dw);
 
-    if ((value == 0) || ((maxDistance >= 0) && (value <= maxDistance*maxDistance))) return target;
+    if ((value == 0) || ((maxDistance >= 0)
+                         && (value <= maxDistance*maxDistance))) return target;
 
     float dist = sqrtf(value);
 
@@ -1440,13 +1461,14 @@ RMAPI Vector4 Vector4Invert(Vector4 v)
 RMAPI int Vector4Equals(Vector4 p, Vector4 q)
 {
 #if !defined(EPSILON)
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
-    int result = ((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x))))) &&
-                  ((fabsf(p.y - q.y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.y), fabsf(q.y))))) &&
-                  ((fabsf(p.z - q.z)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.z), fabsf(q.z))))) &&
-                  ((fabsf(p.w - q.w)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.w), fabsf(q.w)))));
+    int result = ((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x)))))
+                 &&
+                 ((fabsf(p.y - q.y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.y), fabsf(q.y))))) &&
+                 ((fabsf(p.z - q.z)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.z), fabsf(q.z))))) &&
+                 ((fabsf(p.w - q.w)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.w), fabsf(q.w)))));
     return result;
 }
 
@@ -1562,7 +1584,8 @@ RMAPI Matrix MatrixIdentity(void)
     Matrix result = { 1.0f, 0.0f, 0.0f, 0.0f,
                       0.0f, 1.0f, 0.0f, 0.0f,
                       0.0f, 0.0f, 1.0f, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f };
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    };
 
     return result;
 }
@@ -1633,12 +1656,18 @@ RMAPI Matrix MatrixMultiply(Matrix left, Matrix right)
     result.m7 = left.m4*right.m3 + left.m5*right.m7 + left.m6*right.m11 + left.m7*right.m15;
     result.m8 = left.m8*right.m0 + left.m9*right.m4 + left.m10*right.m8 + left.m11*right.m12;
     result.m9 = left.m8*right.m1 + left.m9*right.m5 + left.m10*right.m9 + left.m11*right.m13;
-    result.m10 = left.m8*right.m2 + left.m9*right.m6 + left.m10*right.m10 + left.m11*right.m14;
-    result.m11 = left.m8*right.m3 + left.m9*right.m7 + left.m10*right.m11 + left.m11*right.m15;
-    result.m12 = left.m12*right.m0 + left.m13*right.m4 + left.m14*right.m8 + left.m15*right.m12;
-    result.m13 = left.m12*right.m1 + left.m13*right.m5 + left.m14*right.m9 + left.m15*right.m13;
-    result.m14 = left.m12*right.m2 + left.m13*right.m6 + left.m14*right.m10 + left.m15*right.m14;
-    result.m15 = left.m12*right.m3 + left.m13*right.m7 + left.m14*right.m11 + left.m15*right.m15;
+    result.m10 = left.m8*right.m2 + left.m9*right.m6 + left.m10*right.m10 +
+                 left.m11*right.m14;
+    result.m11 = left.m8*right.m3 + left.m9*right.m7 + left.m10*right.m11 +
+                 left.m11*right.m15;
+    result.m12 = left.m12*right.m0 + left.m13*right.m4 + left.m14*right.m8 +
+                 left.m15*right.m12;
+    result.m13 = left.m12*right.m1 + left.m13*right.m5 + left.m14*right.m9 +
+                 left.m15*right.m13;
+    result.m14 = left.m12*right.m2 + left.m13*right.m6 + left.m14*right.m10 +
+                 left.m15*right.m14;
+    result.m15 = left.m12*right.m3 + left.m13*right.m7 + left.m14*right.m11 +
+                 left.m15*right.m15;
 
     return result;
 }
@@ -1649,7 +1678,8 @@ RMAPI Matrix MatrixTranslate(float x, float y, float z)
     Matrix result = { 1.0f, 0.0f, 0.0f, x,
                       0.0f, 1.0f, 0.0f, y,
                       0.0f, 0.0f, 1.0f, z,
-                      0.0f, 0.0f, 0.0f, 1.0f };
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    };
 
     return result;
 }
@@ -1706,7 +1736,8 @@ RMAPI Matrix MatrixRotateX(float angle)
     Matrix result = { 1.0f, 0.0f, 0.0f, 0.0f,
                       0.0f, 1.0f, 0.0f, 0.0f,
                       0.0f, 0.0f, 1.0f, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f }; // MatrixIdentity()
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    }; // MatrixIdentity()
 
     float cosres = cosf(angle);
     float sinres = sinf(angle);
@@ -1726,7 +1757,8 @@ RMAPI Matrix MatrixRotateY(float angle)
     Matrix result = { 1.0f, 0.0f, 0.0f, 0.0f,
                       0.0f, 1.0f, 0.0f, 0.0f,
                       0.0f, 0.0f, 1.0f, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f }; // MatrixIdentity()
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    }; // MatrixIdentity()
 
     float cosres = cosf(angle);
     float sinres = sinf(angle);
@@ -1746,7 +1778,8 @@ RMAPI Matrix MatrixRotateZ(float angle)
     Matrix result = { 1.0f, 0.0f, 0.0f, 0.0f,
                       0.0f, 1.0f, 0.0f, 0.0f,
                       0.0f, 0.0f, 1.0f, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f }; // MatrixIdentity()
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    }; // MatrixIdentity()
 
     float cosres = cosf(angle);
     float sinres = sinf(angle);
@@ -1767,7 +1800,8 @@ RMAPI Matrix MatrixRotateXYZ(Vector3 angle)
     Matrix result = { 1.0f, 0.0f, 0.0f, 0.0f,
                       0.0f, 1.0f, 0.0f, 0.0f,
                       0.0f, 0.0f, 1.0f, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f }; // MatrixIdentity()
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    }; // MatrixIdentity()
 
     float cosz = cosf(-angle.z);
     float sinz = sinf(-angle.z);
@@ -1833,13 +1867,15 @@ RMAPI Matrix MatrixScale(float x, float y, float z)
     Matrix result = { x, 0.0f, 0.0f, 0.0f,
                       0.0f, y, 0.0f, 0.0f,
                       0.0f, 0.0f, z, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f };
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    };
 
     return result;
 }
 
 // Get perspective projection matrix
-RMAPI Matrix MatrixFrustum(double left, double right, double bottom, double top, double nearPlane, double farPlane)
+RMAPI Matrix MatrixFrustum(double left, double right, double bottom, double top,
+                           double nearPlane, double farPlane)
 {
     Matrix result = { 0 };
 
@@ -1872,7 +1908,8 @@ RMAPI Matrix MatrixFrustum(double left, double right, double bottom, double top,
 
 // Get perspective projection matrix
 // NOTE: Fovy angle must be provided in radians
-RMAPI Matrix MatrixPerspective(double fovY, double aspect, double nearPlane, double farPlane)
+RMAPI Matrix MatrixPerspective(double fovY, double aspect, double nearPlane,
+                               double farPlane)
 {
     Matrix result = { 0 };
 
@@ -1898,7 +1935,8 @@ RMAPI Matrix MatrixPerspective(double fovY, double aspect, double nearPlane, dou
 }
 
 // Get orthographic projection matrix
-RMAPI Matrix MatrixOrtho(double left, double right, double bottom, double top, double nearPlane, double farPlane)
+RMAPI Matrix MatrixOrtho(double left, double right, double bottom, double top,
+                         double nearPlane, double farPlane)
 {
     Matrix result = { 0 };
 
@@ -2176,14 +2214,17 @@ RMAPI Quaternion QuaternionSlerp(Quaternion q1, Quaternion q2, float amount)
     Quaternion result = { 0 };
 
 #if !defined(EPSILON)
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
     float cosHalfTheta = q1.x*q2.x + q1.y*q2.y + q1.z*q2.z + q1.w*q2.w;
 
     if (cosHalfTheta < 0)
     {
-        q2.x = -q2.x; q2.y = -q2.y; q2.z = -q2.z; q2.w = -q2.w;
+        q2.x = -q2.x;
+        q2.y = -q2.y;
+        q2.z = -q2.z;
+        q2.w = -q2.w;
         cosHalfTheta = -cosHalfTheta;
     }
 
@@ -2218,7 +2259,8 @@ RMAPI Quaternion QuaternionSlerp(Quaternion q1, Quaternion q2, float amount)
 
 // Calculate quaternion cubic spline interpolation using Cubic Hermite Spline algorithm
 // as described in the GLTF 2.0 specification: https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#interpolation-cubic
-RMAPI Quaternion QuaternionCubicHermiteSpline(Quaternion q1, Quaternion outTangent1, Quaternion q2, Quaternion inTangent2, float t)
+RMAPI Quaternion QuaternionCubicHermiteSpline(Quaternion q1, Quaternion outTangent1,
+        Quaternion q2, Quaternion inTangent2, float t)
 {
     float t2 = t*t;
     float t3 = t2*t;
@@ -2247,7 +2289,8 @@ RMAPI Quaternion QuaternionFromVector3ToVector3(Vector3 from, Vector3 to)
 {
     Quaternion result = { 0 };
 
-    float cos2Theta = (from.x*to.x + from.y*to.y + from.z*to.z);    // Vector3DotProduct(from, to)
+    float cos2Theta = (from.x*to.x + from.y*to.y +
+                       from.z*to.z);    // Vector3DotProduct(from, to)
     Vector3 cross = { from.y*to.z - from.z*to.y, from.z*to.x - from.x*to.z, from.x*to.y - from.y*to.x }; // Vector3CrossProduct(from, to)
 
     result.x = cross.x;
@@ -2305,30 +2348,30 @@ RMAPI Quaternion QuaternionFromMatrix(Matrix mat)
 
     switch (biggestIndex)
     {
-        case 0:
-            result.w = biggestVal;
-            result.x = (mat.m6 - mat.m9)*mult;
-            result.y = (mat.m8 - mat.m2)*mult;
-            result.z = (mat.m1 - mat.m4)*mult;
-            break;
-        case 1:
-            result.x = biggestVal;
-            result.w = (mat.m6 - mat.m9)*mult;
-            result.y = (mat.m1 + mat.m4)*mult;
-            result.z = (mat.m8 + mat.m2)*mult;
-            break;
-        case 2:
-            result.y = biggestVal;
-            result.w = (mat.m8 - mat.m2)*mult;
-            result.x = (mat.m1 + mat.m4)*mult;
-            result.z = (mat.m6 + mat.m9)*mult;
-            break;
-        case 3:
-            result.z = biggestVal;
-            result.w = (mat.m1 - mat.m4)*mult;
-            result.x = (mat.m8 + mat.m2)*mult;
-            result.y = (mat.m6 + mat.m9)*mult;
-            break;
+    case 0:
+        result.w = biggestVal;
+        result.x = (mat.m6 - mat.m9)*mult;
+        result.y = (mat.m8 - mat.m2)*mult;
+        result.z = (mat.m1 - mat.m4)*mult;
+        break;
+    case 1:
+        result.x = biggestVal;
+        result.w = (mat.m6 - mat.m9)*mult;
+        result.y = (mat.m1 + mat.m4)*mult;
+        result.z = (mat.m8 + mat.m2)*mult;
+        break;
+    case 2:
+        result.y = biggestVal;
+        result.w = (mat.m8 - mat.m2)*mult;
+        result.x = (mat.m1 + mat.m4)*mult;
+        result.z = (mat.m6 + mat.m9)*mult;
+        break;
+    case 3:
+        result.z = biggestVal;
+        result.w = (mat.m1 - mat.m4)*mult;
+        result.x = (mat.m8 + mat.m2)*mult;
+        result.y = (mat.m6 + mat.m9)*mult;
+        break;
     }
 
     return result;
@@ -2340,7 +2383,8 @@ RMAPI Matrix QuaternionToMatrix(Quaternion q)
     Matrix result = { 1.0f, 0.0f, 0.0f, 0.0f,
                       0.0f, 1.0f, 0.0f, 0.0f,
                       0.0f, 0.0f, 1.0f, 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f }; // MatrixIdentity()
+                      0.0f, 0.0f, 0.0f, 1.0f
+                    }; // MatrixIdentity()
 
     float a2 = q.x*q.x;
     float b2 = q.y*q.y;
@@ -2512,10 +2556,11 @@ RMAPI Quaternion QuaternionTransform(Quaternion q, Matrix mat)
 RMAPI int QuaternionEquals(Quaternion p, Quaternion q)
 {
 #if !defined(EPSILON)
-    #define EPSILON 0.000001f
+#define EPSILON 0.000001f
 #endif
 
-    int result = (((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x), fabsf(q.x))))) &&
+    int result = (((fabsf(p.x - q.x)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.x),
+                                          fabsf(q.x))))) &&
                   ((fabsf(p.y - q.y)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.y), fabsf(q.y))))) &&
                   ((fabsf(p.z - q.z)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.z), fabsf(q.z))))) &&
                   ((fabsf(p.w - q.w)) <= (EPSILON*fmaxf(1.0f, fmaxf(fabsf(p.w), fabsf(q.w)))))) ||
@@ -2528,7 +2573,8 @@ RMAPI int QuaternionEquals(Quaternion p, Quaternion q)
 }
 
 // Decompose a transformation matrix into its rotational, translational and scaling components
-RMAPI void MatrixDecompose(Matrix mat, Vector3 *translation, Quaternion *rotation, Vector3 *scale)
+RMAPI void MatrixDecompose(Matrix mat, Vector3 *translation, Quaternion *rotation,
+                           Vector3 *scale)
 {
     // Extract translation.
     translation->x = mat.m12;
@@ -2772,12 +2818,14 @@ inline const Vector3& operator /= (Vector3& lhs, const Vector3& rhs)
 
 inline bool operator == (const Vector3& lhs, const Vector3& rhs)
 {
-    return FloatEquals(lhs.x, rhs.x) && FloatEquals(lhs.y, rhs.y) && FloatEquals(lhs.z, rhs.z);
+    return FloatEquals(lhs.x, rhs.x) && FloatEquals(lhs.y, rhs.y)
+           && FloatEquals(lhs.z, rhs.z);
 }
 
 inline bool operator != (const Vector3& lhs, const Vector3& rhs)
 {
-    return !FloatEquals(lhs.x, rhs.x) || !FloatEquals(lhs.y, rhs.y) || !FloatEquals(lhs.z, rhs.z);
+    return !FloatEquals(lhs.x, rhs.x) || !FloatEquals(lhs.y, rhs.y)
+           || !FloatEquals(lhs.z, rhs.z);
 }
 
 // Vector4 operators
@@ -2856,12 +2904,14 @@ inline const Vector4& operator /= (Vector4& lhs, const Vector4& rhs)
 
 inline bool operator == (const Vector4& lhs, const Vector4& rhs)
 {
-    return FloatEquals(lhs.x, rhs.x) && FloatEquals(lhs.y, rhs.y) && FloatEquals(lhs.z, rhs.z) && FloatEquals(lhs.w, rhs.w);
+    return FloatEquals(lhs.x, rhs.x) && FloatEquals(lhs.y, rhs.y)
+           && FloatEquals(lhs.z, rhs.z) && FloatEquals(lhs.w, rhs.w);
 }
 
 inline bool operator != (const Vector4& lhs, const Vector4& rhs)
 {
-    return !FloatEquals(lhs.x, rhs.x) || !FloatEquals(lhs.y, rhs.y) || !FloatEquals(lhs.z, rhs.z) || !FloatEquals(lhs.w, rhs.w);
+    return !FloatEquals(lhs.x, rhs.x) || !FloatEquals(lhs.y, rhs.y)
+           || !FloatEquals(lhs.z, rhs.z) || !FloatEquals(lhs.w, rhs.w);
 }
 
 // Quaternion operators

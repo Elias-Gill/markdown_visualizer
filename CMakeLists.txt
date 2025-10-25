@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD 99)
 # DEPENDENCIAS EXTERNAS
 # ============================================================================
 
-# Raylib
+# --- Raylib ---
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 
@@ -29,6 +29,12 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(raylib)
+
+# --- FreeType ---
+find_package(Freetype REQUIRED)
+if(FREETYPE_FOUND)
+    include_directories(${FREETYPE_INCLUDE_DIRS})
+endif()
 
 # ============================================================================
 # Configuracion del PROYECTO
@@ -54,7 +60,7 @@ target_include_directories(markdown_visualizer PUBLIC
 )
 
 # Enlazar librerías al ejecutable
-target_link_libraries(markdown_visualizer PUBLIC raylib m)
+target_link_libraries(markdown_visualizer PUBLIC raylib m ${FREETYPE_LIBRARIES})
 
 # ============================================================================
 # CONFIGURACIÓN ADICIONAL

@@ -8,6 +8,10 @@
 
 #include "render.h"
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+
 // Color palette
 #ifdef WHITE_MODE
 #define COLOR_BACKGROUND (Clay_Color){244, 244, 244, 255}  // #f4f4f4
@@ -45,7 +49,8 @@ const uint32_t FONT_ID_SEMIBOLD         = 2;
 const uint32_t FONT_ID_SEMIBOLD_ITALIC  = 3;
 const uint32_t FONT_ID_BOLD             = 4;
 const uint32_t FONT_ID_EXTRABOLD        = 5;
-Font g_fonts[6];
+const uint32_t FONT_ID_EMOJI            = 6;
+Font g_fonts[7];
 int base_font_size = 22;
 
 // Text styles
@@ -153,7 +158,7 @@ static void textline_push(TextLine *line, const char *src, int len,
 // INIT FUNCTIONS
 // ============================================================================
 
-void init_font_styles() {
+void reset_font_styles() {
     // Init font styles
     font_body_regular = (Clay_TextElementConfig) {
         .fontId = FONT_ID_REGULAR, .fontSize = base_font_size, .textColor = COLOR_FOREGROUND
@@ -187,10 +192,37 @@ void init_font_styles() {
     };
 }
 
+void load_emoji_font(int id, char *font_path) {
+    FT_Library ft;
+    FT_Face face;
+    FT_Init_FreeType(&ft);
+    FT_New_Face(ft, font_path, 0, &face);
+
+    int size = base_font_size * 4;
+    FT_Set_Pixel_Sizes(face, 0, size);
+
+    int count = 0x110000;
+    int *codepoints = (int *)malloc(sizeof(int) * count);
+    int valid = 0;
+
+    for (int i = 0; i < count; i++) {
+        if (FT_Get_Char_Index(face, i)) codepoints[valid++] = i;
+    }
+
+    g_fonts[id] = LoadFontEx(font_path, size, codepoints, valid);
+    free(codepoints);
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
+
+    SetTextureFilter(g_fonts[id].texture, TEXTURE_FILTER_BILINEAR);
+    reset_font_styles();
+}
+
 void load_font(int id, char *font_path) {
     g_fonts[id] = LoadFontEx(font_path, base_font_size * 2, NULL, 0);
     SetTextureFilter(g_fonts[id].texture, TEXTURE_FILTER_BILINEAR);
-    init_font_styles();
+    reset_font_styles();
 }
 
 void load_fonts(void) {
@@ -200,6 +232,7 @@ void load_fonts(void) {
     load_font(FONT_ID_SEMIBOLD_ITALIC, "resources/NotoSans-SemiBoldItalic.ttf");
     load_font(FONT_ID_BOLD, "resources/NotoSans-Bold.ttf");
     load_font(FONT_ID_EXTRABOLD, "resources/NotoSans-ExtraBold.ttf");
+    load_emoji_font(FONT_ID_EMOJI, "resources/NotoEmoji-Regular.ttf");
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
 }
@@ -503,7 +536,7 @@ void update_frame(void) {
     // RENDERING ---------------------------------
     BeginDrawing();
     ClearBackground(WHITE);
-    Clay_Raylib_Render(render_commands, g_fonts);
+    Clay_Raylib_Render(render_commands, g_fonts, FONT_ID_EMOJI);
 
     // Now it's safe to free all temporary text buffers created during layout
     free_all_temp_text_buffers();
@@ -518,11 +551,11 @@ void start_main_loop() {
         }
         if (IsKeyPressed(KEY_EQUAL)) {
             base_font_size += 4;
-            init_font_styles();
+            reset_font_styles();
         }
         if (IsKeyPressed(KEY_MINUS)) {
             base_font_size -= 4;
-            init_font_styles();
+            reset_font_styles();
         }
         update_frame();
     }
