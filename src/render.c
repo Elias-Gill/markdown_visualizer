@@ -41,6 +41,7 @@
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
 #define MAIN_LAYOUT_ID "main_layout"
 bool g_debug_enabled = true;
+#define CONTENT_WIDTH_PX (GetScreenWidth() * 0.95f)
 
 // ------------- Fonts --------------
 const uint32_t FONT_ID_REGULAR          = 0;
@@ -446,7 +447,7 @@ static void render_hr(void) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_FIT(0, available_characters * 8.75) },
+            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
         },
         .backgroundColor = COLOR_BACKGROUND,
         .border = { .width = { .top = 1 }, .color = COLOR_DIM }
@@ -457,7 +458,7 @@ static void render_code_block(MarkdownNode *node) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0, available_characters * 8.75) },
+            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
             .padding = { 16, 16, 16, 16 }
         },
         .cornerRadius = 4,
@@ -475,7 +476,7 @@ static void render_quote_block(MarkdownNode *node) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0, available_characters * 8.75) },
+            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
             .padding = { 16, 16, 16, 16 }
         },
         .cornerRadius = 4,
@@ -579,8 +580,7 @@ void update_frame(void) {
     });
 
     // Calculate how many characters can be displayed in a single line.
-    available_characters = (int) (GetScreenWidth() / (base_font_size /
-                                  2)); // Half the regular font size (24)
+    available_characters = (int) (GetScreenWidth() / (base_font_size / 2));
 
     // Update scroll containers
     Vector2 mousePosition = GetMousePosition();
@@ -619,11 +619,11 @@ void start_main_loop() {
             break;
         }
         if (IsKeyPressed(KEY_EQUAL)) {
-            base_font_size += 4;
+            base_font_size += 2;
             reset_font_styles();
         }
         if (IsKeyPressed(KEY_MINUS)) {
-            base_font_size -= 4;
+            base_font_size -= 2;
             reset_font_styles();
         }
         update_frame();
