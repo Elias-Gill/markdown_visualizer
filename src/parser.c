@@ -235,32 +235,83 @@ void free_tree(MarkdownNode *node) {
 //  Debug utilities
 // ------------------------------
 
+static const char* block_type_name(MD_BLOCKTYPE t) {
+    switch (t) {
+    case MD_BLOCK_DOC: return "DOC";
+    case MD_BLOCK_QUOTE: return "QUOTE";
+    case MD_BLOCK_UL: return "UL";
+    case MD_BLOCK_OL: return "OL";
+    case MD_BLOCK_LI: return "LI";
+    case MD_BLOCK_HR: return "HR";
+    case MD_BLOCK_H: return "H";
+    case MD_BLOCK_CODE: return "CODE";
+    case MD_BLOCK_HTML: return "HTML";
+    case MD_BLOCK_P: return "P";
+    case MD_BLOCK_TABLE: return "TABLE";
+    case MD_BLOCK_THEAD: return "THEAD";
+    case MD_BLOCK_TBODY: return "TBODY";
+    case MD_BLOCK_TR: return "TR";
+    case MD_BLOCK_TH: return "TH";
+    case MD_BLOCK_TD: return "TD";
+    default: return "UNKNOWN_BLOCK";
+    }
+}
+
+static const char* span_type_name(MD_SPANTYPE t) {
+    switch (t) {
+    case MD_SPAN_EM: return "EM";
+    case MD_SPAN_STRONG: return "STRONG";
+    case MD_SPAN_A: return "A";
+    case MD_SPAN_IMG: return "IMG";
+    case MD_SPAN_CODE: return "CODE";
+    case MD_SPAN_DEL: return "DEL";
+    case MD_SPAN_LATEXMATH: return "LATEXMATH";
+    case MD_SPAN_LATEXMATH_DISPLAY: return "LATEXMATH_DISPLAY";
+    case MD_SPAN_WIKILINK: return "WIKILINK";
+    case MD_SPAN_U: return "U";
+    default: return "UNKNOWN_SPAN";
+    }
+}
+
+static const char* text_type_name(MD_TEXTTYPE t) {
+    switch (t) {
+    case MD_TEXT_NORMAL: return "NORMAL";
+    case MD_TEXT_NULLCHAR: return "NULLCHAR";
+    case MD_TEXT_BR: return "BR";
+    case MD_TEXT_SOFTBR: return "SOFTBR";
+    case MD_TEXT_ENTITY: return "ENTITY";
+    case MD_TEXT_CODE: return "CODE";
+    case MD_TEXT_HTML: return "HTML";
+    case MD_TEXT_LATEXMATH: return "LATEXMATH";
+    default: return "UNKNOWN_TEXT";
+    }
+}
+
 void print_tree(const MarkdownNode *node, int indent) {
     while (node) {
         for (int i = 0; i < indent; i++) printf("\t");
 
         switch (node->type) {
         case NODE_TEXT:
-            if (node->value.text.type == MD_TEXT_SOFTBR) {
-                printf("[TEXT] type=softbrake\n");
-            } else {
-                printf("[TEXT] type=%d, text='%s'\n", node->value.text.type,
-                       node->value.text.text ? node->value.text.text : "(null)");
-            }
+            printf("[TEXT] type=%s, text='%s'\n",
+                   text_type_name(node->value.text.type),
+                   node->value.text.text ? node->value.text.text : "(null)");
             break;
         case NODE_SPAN:
-            printf("[SPAN] type=%d\n",
-                   node->value.span.type);
+            printf("[SPAN] type=%s\n",
+                   span_type_name(node->value.span.type));
             break;
         case NODE_BLOCK:
-            printf("[BLOCK] type=%d\n",
-                   node->value.block.type);
+            printf("[BLOCK] type=%s\n",
+                   block_type_name(node->value.block.type));
+            break;
+        default:
+            printf("[UNKNOWN NODE]\n");
             break;
         }
 
-        if (node->first_child) {
+        if (node->first_child)
             print_tree(node->first_child, indent + 1);
-        }
 
         node = node->next_sibling;
     }
