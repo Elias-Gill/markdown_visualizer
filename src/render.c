@@ -447,7 +447,8 @@ static void render_hr(void) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
+            // WARNING: The 0.8 scaling factor is arbitrary
+            .sizing = { .width = CLAY_SIZING_GROW(0, CONTENT_WIDTH_PX * 0.8) }
         },
         .backgroundColor = COLOR_BACKGROUND,
         .border = { .width = { .top = 1 }, .color = COLOR_DIM }
