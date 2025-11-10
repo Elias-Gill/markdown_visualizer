@@ -130,7 +130,7 @@ static void textline_flush(void) {
 
 static void textline_push(const char *src, int len,
                           Clay_TextElementConfig *config) {
-    if (line.count >= 256) 
+    if (line.count >= 256)
         textline_flush();
 
     char *buf = malloc(len + 1);
@@ -194,7 +194,9 @@ void load_emoji_font(int id, const char *font_path) {
     int size = base_font_size * 2;
     FT_Set_Pixel_Sizes(face, 0, size);
 
-    static const struct { int start, end; } emoji_ranges[] = {
+    static const struct {
+        int start, end;
+    } emoji_ranges[] = {
         {0x1F300, 0x1F5FF},
         {0x1F600, 0x1F64F},
         {0x1F680, 0x1F6FF},
@@ -203,8 +205,8 @@ void load_emoji_font(int id, const char *font_path) {
         {0x1F800, 0x1F8FF},
         {0x1F900, 0x1F9FF},
         {0x1FA00, 0x1FAFF},
-        {0x2600,  0x26FF}, 
-        {0x2700,  0x27BF}, 
+        {0x2600,  0x26FF},
+        {0x2700,  0x27BF},
     };
 
     int maxCount = 0;
@@ -241,7 +243,9 @@ void load_font(int id, const char *font_path) {
     FT_Set_Pixel_Sizes(face, 0, size);
 
     // Rangos básicos y extendidos latinos
-    static const struct { int start, end; } latin_ranges[] = {
+    static const struct {
+        int start, end;
+    } latin_ranges[] = {
         {0x0020, 0x007E},   // ASCII
         {0x00A0, 0x00FF},   // Latin-1 Supplement
         {0x0100, 0x017F},   // Latin Extended-A
@@ -272,7 +276,10 @@ void load_font(int id, const char *font_path) {
         int cp = special[k];
         if (FT_Get_Char_Index(face, cp)) {
             int already = 0;
-            for (int t = 0; t < valid; t++) if (codepoints[t] == cp) { already = 1; break; }
+            for (int t = 0; t < valid; t++) if (codepoints[t] == cp) {
+                    already = 1;
+                    break;
+                }
             if (!already) codepoints[valid++] = cp;
         }
     }
@@ -368,44 +375,44 @@ static void render_text_node(MarkdownNode *node) {
     Clay_TextElementConfig *config = &font_body_regular;
 
     switch (node->type) {
-        case NODE_TEXT:
-            if (node->value.text.type == MD_TEXT_SOFTBR) {
-                textline_push(" ", 1, &font_body_regular);
-            }
-            text = node->value.text.text;
-            len = node->value.text.size;
-            break;
+    case NODE_TEXT:
+        if (node->value.text.type == MD_TEXT_SOFTBR) {
+            textline_push(" ", 1, &font_body_regular);
+        }
+        text = node->value.text.text;
+        len = node->value.text.size;
+        break;
 
-        case NODE_SPAN:
-            switch (node->value.span.type) {
-                case MD_SPAN_EM:
-                    config = &font_body_italic;
-                    break;
-                case MD_SPAN_STRONG:
-                    config = &font_body_bold;
-                    break;
-                case MD_SPAN_CODE:
-                    config = &inline_code;
-                    break;
-                default:
-                    return;
-            }
-            if (node->first_child && node->first_child->type == NODE_TEXT) {
-                text = node->first_child->value.text.text;
-                len = node->first_child->value.text.size;
-            } else  {
-                return;
-            }
+    case NODE_SPAN:
+        switch (node->value.span.type) {
+        case MD_SPAN_EM:
+            config = &font_body_italic;
             break;
-
+        case MD_SPAN_STRONG:
+            config = &font_body_bold;
+            break;
+        case MD_SPAN_CODE:
+            config = &inline_code;
+            break;
         default:
             return;
+        }
+        if (node->first_child && node->first_child->type == NODE_TEXT) {
+            text = node->first_child->value.text.text;
+            len = node->first_child->value.text.size;
+        } else  {
+            return;
+        }
+        break;
+
+    default:
+        return;
     }
 
     int consumed = 0;
     while (consumed < len) {
         int space = available_characters - line.char_count;
-        if (space <= 0) 
+        if (space <= 0)
             textline_flush();
 
         int remaining = len - consumed;
@@ -489,7 +496,8 @@ static void render_ordered_list(MarkdownNode *current_node) {
             .padding = { 16, 0, 8, 8 }
         },
     }) {
-        for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+        for (MarkdownNode *child = current_node->first_child; child;
+                child = child->next_sibling) {
             render_node(current_node->first_child);
         }
     }
@@ -507,7 +515,8 @@ static void render_unordered_list(MarkdownNode *current_node) {
             .padding = { 16, 0, 8, 8 }
         },
     }) {
-        for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+        for (MarkdownNode *child = current_node->first_child; child;
+                child = child->next_sibling) {
             render_node(child);
         }
     }
@@ -518,27 +527,30 @@ static void render_list_item(MarkdownNode *current_node) {
     if (!current_node->first_child) {
         return;
     }
+
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
             .padding = { 0, 8, 0, 0 }
-            },
-            }) {
+        },
+    }) {
 
         if (list_mode == LIST_MODE_ORDERED) {
             CLAY_TEXT(CLAY_STRING("* "), &font_body_regular);
         } else {
             CLAY_TEXT(CLAY_STRING("- "), &font_body_regular);
         }
+
         CLAY_AUTO_ID({
-                .layout = {
+            .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
                 .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
                 .padding = { 0, 8, 0, 0 }
-                },
-                }) {
-            for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+            },
+        }) {
+            for (MarkdownNode *child = current_node->first_child; child;
+                    child = child->next_sibling) {
                 render_node(child);
             }
         }
@@ -562,7 +574,8 @@ void render_block(MarkdownNode *current_node) {
         switch (current_node->value.block.type) {
         case MD_BLOCK_P:
             textline_init();
-            for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+            for (MarkdownNode *child = current_node->first_child; child;
+                    child = child->next_sibling) {
                 render_text_node(child);
             }
             textline_flush();
@@ -582,33 +595,31 @@ void render_block(MarkdownNode *current_node) {
         case MD_BLOCK_UL:
             list_mode = LIST_MODE_UNORDERED;
             render_unordered_list(current_node);
-            list_mode = last_mode;
             break;
         case MD_BLOCK_OL:
             list_mode = LIST_MODE_ORDERED;
             render_ordered_list(current_node);
-            list_mode = last_mode;
             break;
         case MD_BLOCK_LI:
-            textline_init();
             render_list_item(current_node);
-            textline_flush();
             break;
         default:
             break;
         }
+
+        list_mode = last_mode;
     }
 }
 
 void render_node(MarkdownNode *current_node) {
     switch(current_node->type) {
-        case NODE_BLOCK:
-            render_block(current_node);
-            break;
-        case NODE_TEXT:
-        case NODE_SPAN:
-            render_text_node(current_node);
-            break;
+    case NODE_BLOCK:
+        render_block(current_node);
+        break;
+    case NODE_TEXT:
+    case NODE_SPAN:
+        render_text_node(current_node);
+        break;
     }
 }
 
