@@ -90,25 +90,6 @@ Ray GetScreenToWorldPointWithZDistance(Vector2 position, Camera camera, int scre
     return ray;
 }
 
-// Función auxiliar para contar caracteres UTF-8
-static int CountUTF8Chars(const char* text, int length) {
-    int count = 0;
-    for (int i = 0; i < length; ) {
-        unsigned char c = (unsigned char)text[i];
-        if (c < 0x80) {
-            i += 1;
-        } else if (c < 0xE0) {
-            i += 2;
-        } else if (c < 0xF0) {
-            i += 3;
-        } else {
-            i += 4;
-        }
-        count++;
-    }
-    return count;
-}
-
 // Función para obtener el siguiente carácter UTF-8
 static int GetNextUTF8Char(const char* text, int* index, int length) {
     if (*index >= length) return -1;
@@ -201,36 +182,6 @@ void Clay_Raylib_Close() {
     if(temp_render_buffer) free(temp_render_buffer);
     temp_render_buffer_len = 0;
     CloseWindow();
-}
-
-static int utf8_get_codepoint(const char *s, int *bytesProcessed) {
-    return GetCodepoint(s, bytesProcessed);
-}
-
-static int codepoint_to_utf8(int codepoint, char *out) {
-    if (codepoint <= 0x7F) {
-        out[0] = (char)codepoint;
-        out[1] = '\0';
-        return 1;
-    } else if (codepoint <= 0x7FF) {
-        out[0] = (char)(0xC0 | ((codepoint >> 6) & 0x1F));
-        out[1] = (char)(0x80 | (codepoint & 0x3F));
-        out[2] = '\0';
-        return 2;
-    } else if (codepoint <= 0xFFFF) {
-        out[0] = (char)(0xE0 | ((codepoint >> 12) & 0x0F));
-        out[1] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-        out[2] = (char)(0x80 | (codepoint & 0x3F));
-        out[3] = '\0';
-        return 3;
-    } else {
-        out[0] = (char)(0xF0 | ((codepoint >> 18) & 0x07));
-        out[1] = (char)(0x80 | ((codepoint >> 12) & 0x3F));
-        out[2] = (char)(0x80 | ((codepoint >> 6) & 0x3F));
-        out[3] = (char)(0x80 | (codepoint & 0x3F));
-        out[4] = '\0';
-        return 4;
-    }
 }
 
 static bool is_emoji_codepoint(int cp) {

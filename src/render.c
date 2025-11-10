@@ -1,4 +1,6 @@
-// NOTE: keep it on top of the file in that specific order
+// Disabe annoying braces warning from clay compilation
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+// NOTE: keep this on top of the file in that specific order
 #define CLAY_IMPLEMENTATION
 #include "clay/clay.h"
 #include "clay/clay_renderer_raylib.c"
@@ -759,6 +761,49 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
 }
 
 // ============================================================================
+// SCROLL INPUT HANDLING
+// ============================================================================
+
+#define SCROLL_KEY_REPEAT_DELAY 0.3f
+#define SCROLL_KEY_SPEED 300.0f
+
+static float g_key_timers[] = {0, 0, 0, 0}; // J, K, H, L
+static const KeyboardKey g_scroll_keys[] = {KEY_J, KEY_K, KEY_H, KEY_L};
+static const Vector2 g_scroll_directions[] = {
+    {0, -1},  // J - down
+    {0, 1},   // K - up
+    {-1, 0},  // H - left
+    {1, 0}    // L - right
+};
+
+static void handle_vim_scroll_motions(void) {
+    float delta_time = GetFrameTime();
+    Vector2 scroll_delta = {0};
+
+    for (int i = 0; i < 4; i++) {
+        if (IsKeyDown(g_scroll_keys[i])) {
+            g_key_timers[i] += delta_time;
+            if (g_key_timers[i] >= SCROLL_KEY_REPEAT_DELAY) {
+                scroll_delta.x += g_scroll_directions[i].x * SCROLL_KEY_SPEED * delta_time;
+                scroll_delta.y += g_scroll_directions[i].y * SCROLL_KEY_SPEED * delta_time;
+            }
+        } else {
+            g_key_timers[i] = 0;
+        }
+    }
+
+    if (scroll_delta.x != 0 || scroll_delta.y != 0) {
+        Clay_UpdateScrollContainers(
+            true,
+            (Clay_Vector2) {
+                scroll_delta.x, scroll_delta.y * SCROLL_MULTIPLIER
+            },
+            delta_time
+        );
+    }
+}
+
+// ============================================================================
 // MAIN LOOP AND APPLICATION CONTROL
 // ============================================================================
 
@@ -767,6 +812,16 @@ static void update_frame(void) {
     if (IsKeyPressed(KEY_D)) {
         g_debug_enabled = !g_debug_enabled;
         Clay_SetDebugModeEnabled(g_debug_enabled);
+    }
+
+    // Handle font size changes
+    if (IsKeyPressed(KEY_EQUAL)) {
+        g_base_font_size += 2;
+        reset_font_styles();
+    }
+    if (IsKeyPressed(KEY_MINUS)) {
+        g_base_font_size -= 2;
+        reset_font_styles();
     }
 
     // Update layout dimensions for window resizing
@@ -787,15 +842,20 @@ static void update_frame(void) {
     IsMouseButtonDown(0)
     );
 
-    // Handle scrolling
+    // Handle mouse wheel scrolling
     Vector2 scroll_delta = GetMouseWheelMoveV();
-    Clay_UpdateScrollContainers(
-        true,
-    (Clay_Vector2) {
-        scroll_delta.x, scroll_delta.y * SCROLL_MULTIPLIER
-    },
-    GetFrameTime()
-    );
+    if (scroll_delta.x != 0 || scroll_delta.y != 0) {
+        Clay_UpdateScrollContainers(
+            true,
+        (Clay_Vector2) {
+            scroll_delta.x, scroll_delta.y * SCROLL_MULTIPLIER
+        },
+        GetFrameTime()
+        );
+    } else {
+        // Handle vim-style keyboard scrolling
+        handle_vim_scroll_motions();
+    }
 
     // Generate render commands
     Clay_RenderCommandArray render_commands = render_markdown_tree();
