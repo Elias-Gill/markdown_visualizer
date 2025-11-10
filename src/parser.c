@@ -95,7 +95,6 @@ static void insert_child_node(MarkdownNode *parent, MarkdownNode *child) {
 
 static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
     MarkdownNode *node = should_create_node(NODE_BLOCK);
-
     node->value.block.type = type;
     node->value.block.userdata = userdata;
 
@@ -293,9 +292,17 @@ void print_tree(const MarkdownNode *node, int indent) {
 
         switch (node->type) {
         case NODE_TEXT:
+            if (node->value.text.type == MD_TEXT_SOFTBR) {
+                printf("[TEXT] type=%s\n", text_type_name(node->value.text.type));
+                break;
+            }
+            if (node->value.text.type == MD_TEXT_BR) {
+                printf("[TEXT] type=%s text='\\n'\n", text_type_name(node->value.text.type));
+                break;
+            }
             printf("[TEXT] type=%s, text='%s'\n",
-                   text_type_name(node->value.text.type),
-                   node->value.text.text ? node->value.text.text : "(null)");
+                    text_type_name(node->value.text.type),
+                    node->value.text.text ? node->value.text.text : "(null)");
             break;
         case NODE_SPAN:
             printf("[SPAN] type=%s\n",

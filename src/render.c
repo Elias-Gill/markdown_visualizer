@@ -16,7 +16,7 @@
 #ifdef WHITE_MODE
 #define COLOR_BACKGROUND (Clay_Color){244, 244, 244, 255}  // #f4f4f4
 #define COLOR_FOREGROUND (Clay_Color){34, 34, 34, 255}     // #222222
-#define COLOR_DIM        (Clay_Color){90, 90, 90, 155}     // #5a5a5a
+#define COLOR_DIM        (Clay_Color){200, 200, 200, 180}  // #c8c8c8
 #define COLOR_PINK       (Clay_Color){177, 68, 130, 255}   // #b14482
 #define COLOR_BLUE       (Clay_Color){60, 163, 116, 255}   // #3CA374
 #define COLOR_ORANGE     (Clay_Color){210, 132, 79, 255}   // #d2844f
@@ -27,7 +27,7 @@
 #else // ----- DARK MODE -----
 #define COLOR_BACKGROUND (Clay_Color){34, 35, 35, 255}     // #222323
 #define COLOR_FOREGROUND (Clay_Color){222, 222, 222, 255}  // #dedede
-#define COLOR_DIM        (Clay_Color){125, 125, 125, 155}  // #7d7d7d
+#define COLOR_DIM        (Clay_Color){60, 60, 60, 190}     // #3C3C3C
 #define COLOR_PINK       (Clay_Color){196, 146, 177, 255}  // #C492b1
 #define COLOR_BLUE       (Clay_Color){151, 215, 189, 255}  // #97D7BD
 #define COLOR_ORANGE     (Clay_Color){230, 185, 157, 255}  // #e6b99d
@@ -532,6 +532,7 @@ Clay_RenderCommandArray render_markdown_tree(void) {
 
     Clay_BeginLayout();
 
+    // The apps main container
     int left_pad = (int) (GetScreenWidth() / 8); // Why 8 ? I don't know
     CLAY(CLAY_ID(MAIN_LAYOUT_ID), {
         .layout = {
@@ -539,7 +540,7 @@ Clay_RenderCommandArray render_markdown_tree(void) {
             .padding = { left_pad, 0, 46, 56 },
             .childGap = 16,
             .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
-            .sizing = { .width = CLAY_SIZING_GROW(0) }
+            .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) }
         },
         .backgroundColor = COLOR_BACKGROUND,
         .clip = {

@@ -4,6 +4,21 @@ project(markdown_visualizer C)
 set(CMAKE_C_STANDARD 99)
 
 # ============================================================================
+# BUILD TYPE CONFIGURATION
+# ============================================================================
+
+# Default to Debug if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose build type: Debug or Release" FORCE)
+endif()
+
+# Define standard flags
+set(CMAKE_C_FLAGS_DEBUG   "-g -O0 -Wall -DDEBUG")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+# ============================================================================
 # DEPENDENCIAS EXTERNAS
 # ============================================================================
 

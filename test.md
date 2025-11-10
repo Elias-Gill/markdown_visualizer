@@ -24,6 +24,34 @@ division aca
 
 ---
 
+Lista sin orden:
+- Elemento 1
+- Elemento 2
+- Elemento con mucho texto, con texto en **bold**, en _italic_, con `inline code-blocks`.
+  Que ademas encima es multi-linea con softwraps.
+
+Lista numerada:
+1. Elemento
+2. Elemento
+3. Elemento
+4. Elemento
+
+Listas no ordenadas con sublistas:
+- Elemento 1
+    - Subelemento 3
+- Elemento 2
+    - Subelemento 4
+
+Listas con sublistas complejas:
+1. Elemento 1
+    - Subelemento 3
+    - Subelemento 3
+    1. Subelemento 3
+        - Subelemento 3
+        - Subelemento 3
+2. Elemento 2
+    - Subelemento 4
+
 ## Prueba de codigo
 ```python
 def aca_un_poco_de_codigo():

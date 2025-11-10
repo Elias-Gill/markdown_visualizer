@@ -1,30 +1,203 @@
-[BLOCK] type=0
-        [BLOCK] type=5
-        [BLOCK] type=6
-                [TEXT] type=0, text='Title: WIKI PERSONAL'
-                [TEXT] type=3, text='
+[BLOCK] type=DOC
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Titulo 1'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Titulo 2'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Titulo 3'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Titulo 4'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Titulo 5'
+        [BLOCK] type=P
+                [SPAN] type=EM
+                        [TEXT] type=NORMAL, text='Un parrafo enorme sin wrap (esto debe de ser italic):'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Contrary to popular '
+                [SPAN] type=STRONG
+                        [TEXT] type=NORMAL, text='belief'
+                [TEXT] type=NORMAL, text=', Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Este un parrafo grande pero con softbreaks: The standard chunk of Lorem Ipsum'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='used since the 1500s is reproduced below for those interested. Sections 1.10.32'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='in their exact original form, accompanied by English versions from the 1914'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='translation by H. Rackham.'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Esto no tiene que ser pero lo que esta aca al lado '
+                [SPAN] type=STRONG
+                        [TEXT] type=NORMAL, text='si es STRONG CON'
+                        [TEXT] type=SOFTBR
+                        [TEXT] type=NORMAL, text='COLOR'
+                [TEXT] type=NORMAL, text='. Esto debe ir pegado nomas: Cosas que no tiene nada que ver'
+                [TEXT] type=SOFTBR
+                [SPAN] type=CODE
+                        [TEXT] type=CODE, text='un algo pero con codigo'
+        [BLOCK] type=P
+                [SPAN] type=A
+                        [TEXT] type=NORMAL, text='UN link con texto dentro'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='division aca'
+        [BLOCK] type=HR
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Lista sin orden:'
+        [BLOCK] type=UL
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 1'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 2'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 3'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 4'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Lista numerada:'
+        [BLOCK] type=OL
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Listas no ordenadas con sublistas:'
+        [BLOCK] type=UL
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 1'
+                        [BLOCK] type=UL
+                                [BLOCK] type=LI
+                                        [TEXT] type=NORMAL, text='Subelemento 3'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 2'
+                        [BLOCK] type=UL
+                                [BLOCK] type=LI
+                                        [TEXT] type=NORMAL, text='Subelemento 4'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Listas con sublistas complejas:'
+        [BLOCK] type=OL
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 1'
+                        [BLOCK] type=UL
+                                [BLOCK] type=LI
+                                        [TEXT] type=NORMAL, text='Subelemento 3'
+                                [BLOCK] type=LI
+                                        [TEXT] type=NORMAL, text='Subelemento 3'
+                        [BLOCK] type=OL
+                                [BLOCK] type=LI
+                                        [TEXT] type=NORMAL, text='Subelemento 3'
+                                        [BLOCK] type=UL
+                                                [BLOCK] type=LI
+                                                        [TEXT] type=NORMAL, text='Subelemento 3'
+                                                [BLOCK] type=LI
+                                                        [TEXT] type=NORMAL, text='Subelemento 3'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Elemento 2'
+                        [BLOCK] type=UL
+                                [BLOCK] type=LI
+                                        [TEXT] type=NORMAL, text='Subelemento 4'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Prueba de codigo'
+        [BLOCK] type=CODE
+                [TEXT] type=NORMAL, text='def aca_un_poco_de_codigo():
+    return nada
+    return nada
+    return nada
+    return nada
 '
-                [TEXT] type=0, text='Description: Pagina de index de la wiki'
-        [BLOCK] type=6
-                [TEXT] type=0, text='Proyectos'
-        [BLOCK] type=6
-                [TEXT] type=0, text='Current work'
-        [BLOCK] type=2
-                [BLOCK] type=4
-                        [SPAN] type=2
-                                [TEXT] type=0, text='Markdown visualizer'
-        [BLOCK] type=6
-                [TEXT] type=0, text='Stand by'
-        [BLOCK] type=2
-                [BLOCK] type=4
-                        [SPAN] type=2
-                                [TEXT] type=0, text='poliplanner'
-                [BLOCK] type=4
-                        [SPAN] type=2
-                                [TEXT] type=0, text='yt_player'
-                [BLOCK] type=4
-                        [SPAN] type=2
-                                [TEXT] type=0, text='portfolio'
-                [BLOCK] type=4
-                        [SPAN] type=2
-                                [TEXT] type=0, text='Tres en raya'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Prueba de Citas'
+        [BLOCK] type=QUOTE
+                [BLOCK] type=P
+                        [TEXT] type=NORMAL, text='Algo de texto normal'
+                [BLOCK] type=H
+                        [TEXT] type=NORMAL, text='Un mini titulo inside quotes'
+                [BLOCK] type=UL
+                        [BLOCK] type=LI
+                                [TEXT] type=NORMAL, text='Una lista dentro del algo'
+                        [BLOCK] type=LI
+                                [TEXT] type=NORMAL, text='Una lista dentro del algo'
+                        [BLOCK] type=LI
+                                [TEXT] type=NORMAL, text='Una lista dentro del algo'
+                [BLOCK] type=QUOTE
+                        [BLOCK] type=P
+                                [TEXT] type=NORMAL, text='Nested encima quotes'
+                                [TEXT] type=SOFTBR
+                                [SPAN] type=STRONG
+                                        [TEXT] type=NORMAL, text='strong inside quote'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Prueba de caracteres hispanicos'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='El niño pidió café con azúcar y una pequeña porción de piña fría, mientras'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='observaba cómo el sol se ocultaba detrás de las montañas. "¿Qué día es hoy?",'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='preguntó con curiosidad, sin notar que el reloj marcaba ya las ocho y cuarto. A'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='lo lejos, una canción decía: ¡Qué alegría volver a casa después de tanto'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='tiempo! — y en ese instante— todo pareció detenerse: el aire, la luz, y hasta el'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='murmullo del río.'
+        [BLOCK] type=H
+                [TEXT] type=NORMAL, text='Prueba de emojis'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='¡Hola Mundo! 🌍'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Prueba de caracteres UTF-8 y emojis:'
+        [BLOCK] type=OL
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Español: ¡Hola! ¿Cómo estás?'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Francés: Bonjour! Ça va?'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Alemán: Grüß Gott!'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Japonés: こんにちは'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Chino: 你好'
+                [BLOCK] type=LI
+                        [TEXT] type=NORMAL, text='Ruso: Привет!'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Emojis comunes:'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='😀 😃 😄 😁 😆 😅 🤣 😂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️ 😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Emojis de objetos:'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='📱 💻 🖥️ ⌨️ 🖱️ 🖨️ 🎮 🕹️ 🎲 ♟️ 🎯 🎳 🎪 🎭 💃 🕺 👯‍♀️ 👯‍♂️'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Emojis de naturaleza:'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🌞 🌝 🌛 🌜 🌚 🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔 🌙 🌎 🌍 🌏 💫 ⭐️ 🌟 ✨ ⚡️ 🔥 💥 ☄️'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Emojis de comida:'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🍎 🍐 🍊 🍋 🍌 🍉 🍇 🍓 🫐 🍈 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🍆 🥑 🥦 🥬 🥒 🌶 🫑 🌽 🥕 🫒 🧄 🧅 🥔 🍠'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='Emojis de banderas:'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇪🇸 España'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇫🇷 Francia'
+                [TEXT] type=BR text='\n'
+                [TEXT] type=NORMAL, text='🇩🇪 Alemania'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇮🇹 Italia'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇬🇧 Reino Unido'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇺🇸 Estados Unidos'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇲🇽 México'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇨🇴 Colombia'
+                [TEXT] type=SOFTBR
+                [TEXT] type=NORMAL, text='🇦🇷 Argentina'
+        [BLOCK] type=P
+                [TEXT] type=NORMAL, text='¡Fin de la prueba! 🎉 ✅'
