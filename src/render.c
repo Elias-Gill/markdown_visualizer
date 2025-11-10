@@ -43,6 +43,10 @@
 bool g_debug_enabled = true;
 #define CONTENT_WIDTH_PX (GetScreenWidth() * 0.95f)
 
+#define LIST_MODE_ORDERED   1
+#define LIST_MODE_UNORDERED 0
+int list_mode = LIST_MODE_ORDERED;
+
 // ------------- Fonts --------------
 const uint32_t FONT_ID_REGULAR          = 0;
 const uint32_t FONT_ID_ITALIC           = 1;
@@ -82,9 +86,11 @@ typedef struct {
     int char_count;
 } TextLine;
 
-// forward declarations
+static TextLine line;
+
+// Forward declarations
 static inline Clay_String make_clay_string(char *text, long length);
-static void render_text_elements(TextElement *line, int count);
+static void render_text_elements(TextElement *elements, int count);
 
 // Temporary text buffers
 static char **g_temp_text_buffers = NULL;
@@ -92,14 +98,9 @@ static int g_temp_text_count = 0;
 static int g_temp_text_capacity = 0;
 
 static void ensure_temp_text_capacity(int needed) {
-    if (g_temp_text_capacity >= needed) {
-        return;
-    }
-    // Double capacity until we have enough space
+    if (g_temp_text_capacity >= needed) return;
     int newcap = g_temp_text_capacity ? g_temp_text_capacity * 2 : 256;
-    while (newcap < needed) {
-        newcap *= 2;
-    }
+    while (newcap < needed) newcap *= 2;
     g_temp_text_buffers = realloc(g_temp_text_buffers, newcap * sizeof(char*));
     g_temp_text_capacity = newcap;
 }
@@ -110,49 +111,40 @@ static void push_temp_text_buffer(char *buf) {
 }
 
 static void free_all_temp_text_buffers(void) {
-    for (int i = 0; i < g_temp_text_count; ++i) {
+    for (int i = 0; i < g_temp_text_count; ++i)
         free(g_temp_text_buffers[i]);
-    }
     g_temp_text_count = 0;
-    // keep buffer allocated for reuse
 }
 
-static void textline_init(TextLine *line) {
-    line->count = 0;
-    line->char_count = 0;
+static void textline_init(void) {
+    line.count = 0;
+    line.char_count = 0;
 }
 
-static void textline_flush(TextLine *line) {
-    if (line->count == 0) {
-        return;
-    }
-    render_text_elements(line->elements, line->count);
-    line->count = 0;
-    line->char_count = 0;
+static void textline_flush(void) {
+    if (line.count == 0) return;
+    render_text_elements(line.elements, line.count);
+    line.count = 0;
+    line.char_count = 0;
 }
 
-static void textline_push(TextLine *line, const char *src, int len,
+static void textline_push(const char *src, int len,
                           Clay_TextElementConfig *config) {
-    if (line->count >= 256) {
-        textline_flush(line);
-    }
+    if (line.count >= 256) 
+        textline_flush();
 
-    // Allocate a temp copy of the string
     char *buf = malloc(len + 1);
     memcpy(buf, src, len);
     buf[len] = '\0';
     push_temp_text_buffer(buf);
 
-    // Register text element
-    line->elements[line->count].string = make_clay_string(buf, len);
-    line->elements[line->count].config = config;
-    line->count++;
-    line->char_count += len;
+    line.elements[line.count].string = make_clay_string(buf, len);
+    line.elements[line.count].config = config;
+    line.count++;
+    line.char_count += len;
 
-    // Flush line if full
-    if (line->char_count >= available_characters) {
-        textline_flush(line);
-    }
+    if (line.char_count >= available_characters)
+        textline_flush();
 }
 
 // ============================================================================
@@ -343,7 +335,7 @@ void init_clay(void) {
 // RENDERING AND REUSABLE COMPONENTS
 // ============================================================================
 
-void render_block(MarkdownNode *current_node);
+void render_node(MarkdownNode *current_node);
 
 // Creates a Clay_String from a C string
 static inline Clay_String make_clay_string(char *text, long length) {
@@ -354,7 +346,7 @@ static inline Clay_String make_clay_string(char *text, long length) {
     };
 }
 
-static void render_text_elements(TextElement *line, int count) {
+static void render_text_elements(TextElement *elements, int count) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -365,67 +357,62 @@ static void render_text_elements(TextElement *line, int count) {
     }) {
         for (int i = 0; i < count; ++i) {
             // config is stored as pointer to global config; dereference for CLAY_TEXT
-            CLAY_TEXT(line[i].string, line[i].config);
+            CLAY_TEXT(elements[i].string, elements[i].config);
         }
     }
 }
 
-static void render_paragraph(MarkdownNode *node) {
-    TextLine line;
-    textline_init(&line);
+static void render_text_node(MarkdownNode *node) {
+    const char *text = NULL;
+    int len = 0;
+    Clay_TextElementConfig *config = &font_body_regular;
 
-    for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
-        const char *text = NULL;
-        int len = 0;
-        Clay_TextElementConfig *config = &font_body_regular;
-
-        switch (child->type) {
+    switch (node->type) {
         case NODE_TEXT:
-            if (child->value.text.type == MD_TEXT_SOFTBR) {
-                textline_push(&line, " ", 1, &font_body_regular);
-                continue;
+            if (node->value.text.type == MD_TEXT_SOFTBR) {
+                textline_push(" ", 1, &font_body_regular);
             }
-            text = child->value.text.text;
-            len = child->value.text.size;
+            text = node->value.text.text;
+            len = node->value.text.size;
             break;
 
         case NODE_SPAN:
-            switch (child->value.span.type) {
-            case MD_SPAN_EM:
-                config = &font_body_italic;
-                break;
-            case MD_SPAN_STRONG:
-                config = &font_body_bold;
-                break;
-            case MD_SPAN_CODE:
-                config = &inline_code;
-                break;
-            default:
-                continue;
+            switch (node->value.span.type) {
+                case MD_SPAN_EM:
+                    config = &font_body_italic;
+                    break;
+                case MD_SPAN_STRONG:
+                    config = &font_body_bold;
+                    break;
+                case MD_SPAN_CODE:
+                    config = &inline_code;
+                    break;
+                default:
+                    return;
             }
-            if (child->first_child && child->first_child->type == NODE_TEXT) {
-                text = child->first_child->value.text.text;
-                len = child->first_child->value.text.size;
-            } else continue;
+            if (node->first_child && node->first_child->type == NODE_TEXT) {
+                text = node->first_child->value.text.text;
+                len = node->first_child->value.text.size;
+            } else  {
+                return;
+            }
             break;
 
         default:
-            continue;
-        }
-
-        int consumed = 0;
-        while (consumed < len) {
-            int space = available_characters - line.char_count;
-            if (space <= 0) textline_flush(&line);
-
-            int remaining = len - consumed;
-            int take = remaining > space ? space : remaining;
-            textline_push(&line, text + consumed, take, config);
-            consumed += take;
-        }
+            return;
     }
 
-    textline_flush(&line);
+    int consumed = 0;
+    while (consumed < len) {
+        int space = available_characters - line.char_count;
+        if (space <= 0) 
+            textline_flush();
+
+        int remaining = len - consumed;
+        int take = remaining > space ? space : remaining;
+        textline_push(text + consumed, take, config);
+        consumed += take;
+    }
 }
 
 static void render_heading(MarkdownNode *node) {
@@ -451,7 +438,7 @@ static void render_hr(void) {
             .sizing = { .width = CLAY_SIZING_GROW(0, CONTENT_WIDTH_PX * 0.8) }
         },
         .backgroundColor = COLOR_BACKGROUND,
-        .border = { .width = { .top = 1 }, .color = COLOR_DIM }
+        .border = { .width = { .top = 2 }, .color = COLOR_DIM }
     }) {};
 }
 
@@ -481,13 +468,83 @@ static void render_quote_block(MarkdownNode *node) {
             .padding = { 16, 16, 16, 16 }
         },
         .cornerRadius = 4,
-        .backgroundColor = COLOR_DIM,
+        .border = { .width = { .left = 3 }, .color = COLOR_PINK },
         .clip = { .vertical = true, .horizontal = true, .childOffset = Clay_GetScrollOffset() }
     }) {
         for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
-            render_block(child);
+            render_node(child);
         }
     };
+}
+
+static void render_ordered_list(MarkdownNode *current_node) {
+    if (!current_node->first_child) {
+        return;
+    }
+
+    CLAY_AUTO_ID({
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
+            .padding = { 16, 0, 8, 8 }
+        },
+    }) {
+        for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+            render_node(current_node->first_child);
+        }
+    }
+}
+
+static void render_unordered_list(MarkdownNode *current_node) {
+    if (!current_node->first_child) {
+        return;
+    }
+
+    CLAY_AUTO_ID({
+        .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
+            .padding = { 16, 0, 8, 8 }
+        },
+    }) {
+        for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+            render_node(child);
+        }
+    }
+}
+
+static void render_list_item(MarkdownNode *current_node) {
+    textline_init();
+    if (!current_node->first_child) {
+        return;
+    }
+    CLAY_AUTO_ID({
+            .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
+            .padding = { 0, 8, 0, 0 }
+            },
+            }) {
+
+        if (list_mode == LIST_MODE_ORDERED) {
+            CLAY_TEXT(CLAY_STRING("* "), &font_body_regular);
+        } else {
+            CLAY_TEXT(CLAY_STRING("- "), &font_body_regular);
+        }
+        CLAY_AUTO_ID({
+                .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
+                .padding = { 0, 8, 0, 0 }
+                },
+                }) {
+            for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+                render_node(child);
+            }
+        }
+    }
+
+    textline_flush();
 }
 
 void render_block(MarkdownNode *current_node) {
@@ -500,9 +557,15 @@ void render_block(MarkdownNode *current_node) {
         },
         .backgroundColor = COLOR_BACKGROUND,
     }) {
+        int last_mode = list_mode;
+
         switch (current_node->value.block.type) {
         case MD_BLOCK_P:
-            render_paragraph(current_node);
+            textline_init();
+            for (MarkdownNode *child = current_node->first_child; child; child = child->next_sibling) {
+                render_text_node(child);
+            }
+            textline_flush();
             break;
         case MD_BLOCK_H:
             render_heading(current_node);
@@ -516,9 +579,36 @@ void render_block(MarkdownNode *current_node) {
         case MD_BLOCK_QUOTE:
             render_quote_block(current_node);
             break;
+        case MD_BLOCK_UL:
+            list_mode = LIST_MODE_UNORDERED;
+            render_unordered_list(current_node);
+            list_mode = last_mode;
+            break;
+        case MD_BLOCK_OL:
+            list_mode = LIST_MODE_ORDERED;
+            render_ordered_list(current_node);
+            list_mode = last_mode;
+            break;
+        case MD_BLOCK_LI:
+            textline_init();
+            render_list_item(current_node);
+            textline_flush();
+            break;
         default:
             break;
         }
+    }
+}
+
+void render_node(MarkdownNode *current_node) {
+    switch(current_node->type) {
+        case NODE_BLOCK:
+            render_block(current_node);
+            break;
+        case NODE_TEXT:
+        case NODE_SPAN:
+            render_text_node(current_node);
+            break;
     }
 }
 
@@ -551,12 +641,8 @@ Clay_RenderCommandArray render_markdown_tree(void) {
     }) {
         // The root node is a single node, it does not have siblings. All the childs of the
         // root node are always block nodes.
-        if (node->first_child) {
-            node = node->first_child;
-            while (node) {
-                render_block(node);
-                node = node->next_sibling;
-            }
+        for (MarkdownNode *child = node->first_child; child; child = child->next_sibling) {
+            render_node(child);
         }
     }
 
