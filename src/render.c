@@ -159,27 +159,6 @@ static void free_all_temp_text_buffers(void) {
 // ============================================================================
 
 static void render_text_elements(TextElement* elements, int count) {
-    CLAY_AUTO_ID({
-        .layout = {
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .childGap = 0,
-            .sizing = { .width = CLAY_SIZING_GROW(0) }
-        },
-        .backgroundColor = COLOR_BACKGROUND,
-    }) {
-        CLAY_AUTO_ID({
-            .layout = {
-                .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                .childGap = 0,
-                .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-        }) {
-            for (int i = 0; i < count; ++i) {
-                CLAY_TEXT(elements[i].string, elements[i].config);
-            }
-        }
-    }
 }
 
 static void textline_init(void) {
@@ -192,7 +171,30 @@ static void textline_flush() {
         return;
     }
 
-    render_text_elements(g_current_line.elements, g_current_line.count);
+    // Line container
+    CLAY_AUTO_ID({
+            .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .childGap = 0,
+            .sizing = { .width = CLAY_SIZING_GROW(0) }
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+            }) {
+        CLAY_AUTO_ID({
+                .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .childGap = 0,
+                .sizing = { .width = CLAY_SIZING_GROW(0) }
+                },
+                .backgroundColor = COLOR_BACKGROUND,
+                }) {
+            // render each text element
+            for (int i = 0; i < g_current_line.count; ++i) {
+                CLAY_TEXT(g_current_line.elements[i].string, g_current_line.elements[i].config);
+            }
+        }
+    }
+
     g_current_line.count = 0;
     g_current_line.char_count = 0;
 }
@@ -509,6 +511,11 @@ static void render_text_node(MarkdownNode* node, float available_width) {
         case MD_SPAN_CODE:
             config = &g_font_inline_code;
             break;
+        case MD_SPAN_A:
+                /*MD_ATTRIBUTE href;*/
+                /*MD_ATTRIBUTE title;*/
+                /*int is_autolink;            [> nonzero if this is an autolink <]*/
+                /*MD_SPAN_A_DETAIL;*/
         default:
             return;
         }
@@ -865,59 +872,60 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
 }
 
 // ============================================================================
-// SCROLL INPUT HANDLING
+// SCROLL INPUT HANDLING (Adaptive + Smooth)
 // ============================================================================
 
-// TODO: make the scroll behavior change acording to the screen size and make it more fluid
-#define SCROLL_KEY_REPEAT_START_DELAY 0.25f
-#define SCROLL_KEY_REPEAT_DELAY 0.10f
-#define SCROLL_KEY_SPEED 1.2f
-#define SCROLL_MULTIPLIER 4.9f
+#define SCROLL_KEY_REPEAT_START_DELAY 0.28f
+#define SCROLL_KEY_REPEAT_DELAY       0.10f
+#define SCROLL_MULTIPLIER             4.5f
 
 typedef struct {
-    KeyboardKey key;
+    int key;
     Vector2 direction;
     float timer;
     bool repeating;
-    float speed_multiplier;
+    float screen_portion; // fraction of screen height to scroll per trigger
 } ScrollKey;
 
 static ScrollKey g_scroll_keys[] = {
-    {.key = KEY_J, .direction = {0, -1}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // down
-    {.key = KEY_K, .direction = {0,  1}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // up
-    {.key = KEY_H, .direction = {1, 0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // left
-    {.key = KEY_L, .direction = {-1,  0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // right
-    {.key = KEY_D, .direction = {0, -1}, .timer = 0, .repeating = false, .speed_multiplier = 6.2f},  // half page down
-    {.key = KEY_U, .direction = {0,  1}, .timer = 0, .repeating = false, .speed_multiplier = 6.2f}   // half page up
+    {.key = KEY_J, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // small step down
+    {.key = KEY_K, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // small step up
+    {.key = KEY_H, .direction = {1,  0}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // left
+    {.key = KEY_L, .direction = {-1, 0}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // right
+    {.key = KEY_D, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.095f},  // half page down
+    {.key = KEY_U, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.095f},  // half page up
 };
 
 static void handle_vim_scroll_motions(void) {
+    float screen_height = GetScreenHeight();
     float delta_time = GetFrameTime();
     Vector2 scroll_delta = {0};
 
     for (int i = 0; i < (int)(sizeof(g_scroll_keys) / sizeof(g_scroll_keys[0])); i++) {
         ScrollKey *k = &g_scroll_keys[i];
 
-        if (IsKeyDown(k->key)) {
+        // First press acts immediately
+        if (IsKeyPressed(k->key)) {
+            float scroll_pixels = screen_height * k->screen_portion;
+            scroll_delta.x += k->direction.x * scroll_pixels;
+            scroll_delta.y += k->direction.y * scroll_pixels;
+            k->timer = 0;
+            k->repeating = false;
+        }
+        // Handle hold + repeat
+        else if (IsKeyDown(k->key)) {
             k->timer += delta_time;
-            if (!k->repeating) {
-                // First press should actuate inmediatelly
-                if (k->timer == delta_time) {
-                    scroll_delta.x += k->direction.x * SCROLL_KEY_SPEED * k->speed_multiplier;
-                    scroll_delta.y += k->direction.y * SCROLL_KEY_SPEED * k->speed_multiplier;
-                }
-                // Repetetion starts after the initial start_delay
-                else if (k->timer >= SCROLL_KEY_REPEAT_START_DELAY) {
-                    k->repeating = true;
-                    k->timer = 0;
-                }
-            } else {
-                // The key is now repited (with less delay)
-                if (k->timer >= SCROLL_KEY_REPEAT_DELAY) {
-                    scroll_delta.x += k->direction.x * SCROLL_KEY_SPEED * k->speed_multiplier;
-                    scroll_delta.y += k->direction.y * SCROLL_KEY_SPEED * k->speed_multiplier;
-                    k->timer = 0;
-                }
+
+            if (!k->repeating && k->timer >= SCROLL_KEY_REPEAT_START_DELAY) {
+                k->repeating = true;
+                k->timer = 0;
+            }
+
+            if (k->repeating && k->timer >= SCROLL_KEY_REPEAT_DELAY) {
+                float scroll_pixels = screen_height * k->screen_portion;
+                scroll_delta.x += k->direction.x * scroll_pixels;
+                scroll_delta.y += k->direction.y * scroll_pixels;
+                k->timer = 0;
             }
         } else {
             k->timer = 0;
@@ -925,14 +933,28 @@ static void handle_vim_scroll_motions(void) {
         }
     }
 
-    // Update CLAY scroll containers
-    if (scroll_delta.x != 0 || scroll_delta.y != 0) {
+    // Single-key "g" (top) and "G" (bottom) scroll mapping
+    if (IsKeyPressed(KEY_G)) {
+        bool shift_held = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+        if (shift_held) {
+            scroll_delta.y -= screen_height * 100.0f; // scroll to bottom
+        } else {
+            scroll_delta.y = screen_height * 100.0f;  // scroll to top
+        }
+    }
+
+    // Higher smoothing_factor => faster interpolation response
+    const float smoothing_factor = 15.0f;
+    static Vector2 smoothed_scroll = {0};
+
+    smoothed_scroll.x += (scroll_delta.x - smoothed_scroll.x) * smoothing_factor * delta_time;
+    smoothed_scroll.y += (scroll_delta.y - smoothed_scroll.y) * smoothing_factor * delta_time;
+
+    if (fabsf(smoothed_scroll.x) > 0.01f || fabsf(smoothed_scroll.y) > 0.01f) {
         Clay_UpdateScrollContainers(
             true,
-        (Clay_Vector2) {
-            scroll_delta.x, scroll_delta.y * SCROLL_MULTIPLIER
-        },
-        delta_time
+            (Clay_Vector2){smoothed_scroll.x, smoothed_scroll.y},
+            delta_time
         );
     }
 }

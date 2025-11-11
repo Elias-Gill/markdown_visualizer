@@ -32,6 +32,7 @@ static void start_text_accumulation(void) {
     accumulated_text_node->next_sibling = NULL;
 }
 
+// NOTE: No need to manually append a null terminator; Clay handles both during rendering.
 static void accumulate_text(const MD_CHAR *text, MD_SIZE size) {
     // old_size stores the stored buffer size
     MD_SIZE old_size = accumulated_text_node->value.text.size;
