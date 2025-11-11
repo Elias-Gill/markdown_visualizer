@@ -1,3 +1,10 @@
+```
+• (U+2022) — bullet sólido clásico
+◦ (U+25E6) — bullet pequeño sin relleno
+- (guion) — simple y universal
+*
+```
+
 # Titulo 1
 ## Titulo 2
 ### Titulo 3
@@ -42,15 +49,37 @@ Listas no ordenadas con sublistas:
 - Elemento 2
     - Subelemento 4
 
-Listas con sublistas complejas:
+# Prueba: Listas complejas
+
 1. Elemento 1
-    - Subelemento 3
-    - Subelemento 3
-    1. Subelemento 3
-        - Subelemento 3
-        - Subelemento 3
+    - Subelemento 1.1
+    - Subelemento 1.2
+        1. Subelemento 1.2.1
+            - Subelemento 1.2.1.a
+            - Subelemento 1.2.1.b
+        2. Subelemento 1.2.2
+    - Subelemento 1.3 con **negrita** y *cursiva*
 2. Elemento 2
-    - Subelemento 4
+    - Subelemento 2.1
+        - Subelemento 2.1.1
+        - Subelemento 2.1.2 con [enlace](https://example.com)
+    - Subelemento 2.2
+3. Elemento 3
+    1. Subordenado 3.1
+        - Mixto A
+            1. Profundo 3.1.1
+                - Aún más profundo
+    2. Subordenado 3.2 con `código inline`
+    3. Subordenado 3.3
+        - Párrafo dentro de sublista:
+          
+          Texto independiente indentado correctamente.
+4. Elemento 4 con texto largo para probar el ajuste de línea en renderizado.  
+   Este párrafo continúa la línea anterior dentro del mismo ítem.
+    - Subitem con lista mixta:
+        * Asterisco
+        + Más
+        - Guion
 
 ## Prueba de codigo
 ```python

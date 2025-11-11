@@ -349,16 +349,20 @@ static void load_font_with_ranges(int font_id, const char* font_path,
 
 static void load_emoji_font(int font_id, const char* font_path) {
     static const CodepointRange emoji_ranges[] = {
-        {0x1F300, 0x1F5FF},
-        {0x1F600, 0x1F64F},
-        {0x1F680, 0x1F6FF},
-        {0x1F700, 0x1F77F},
-        {0x1F780, 0x1F7FF},
-        {0x1F800, 0x1F8FF},
-        {0x1F900, 0x1F9FF},
-        {0x1FA00, 0x1FAFF},
-        {0x2600,  0x26FF},
-        {0x2700,  0x27BF},
+        {0x1F300, 0x1F5FF}, // Miscellaneous and Pictographs: objects, nature, and symbols
+        {0x1F600, 0x1F64F}, // Facial expressions and human emotions
+        {0x1F680, 0x1F6FF}, // Transport and Map Symbols
+        {0x1F700, 0x1F77F}, // Alchemical Symbols
+        {0x1F780, 0x1F7FF}, // Geometric Shapes Extended
+        {0x1F800, 0x1F8FF}, // Supplemental Arrows
+        {0x1F900, 0x1F9FF}, // Supplemental Symbols and Pictographs
+        {0x1FA00, 0x1FAFF}, // Symbols and Pictographs Extended-A
+        {0x2600,  0x26FF},  // More miscellaneous Symbols (like weather)
+        {0x2700,  0x27BF},  // Decorative marks and bullet-like symbols
+        {0x25A0,  0x25FF},  // Geometric Shapes
+        {0x2B50,  0x2B55},  // More miscellaneous symbols and arrows
+        {0x1F536, 0x1F53F}, // Colored geometric shapes
+        {0x1F7E0, 0x1F7EB}, // Geometric Shapes Extended subset
     };
 
     load_font_with_ranges(font_id, font_path,
@@ -373,6 +377,7 @@ static void load_standard_font(int font_id, const char* font_path) {
         {0x00A0, 0x00FF},   // Latin-1 Supplement
         {0x0100, 0x017F},   // Latin Extended-A
         {0x0180, 0x024F},   // Latin Extended-B
+        {0x2000, 0x206F},   // List bullet points
     };
 
     static const int special_codepoints[] = {
@@ -616,7 +621,8 @@ static void render_unordered_list(MarkdownNode* current_node) {
             .padding = { 16, 0, 8, 8 }
         },
     }) {
-        for (MarkdownNode* child = current_node->first_child; child; child = child->next_sibling) {
+        for (MarkdownNode* child = current_node->first_child; child;
+                child = child->next_sibling) {
             render_node(child);
         }
     }
@@ -632,15 +638,24 @@ static void render_list_item(MarkdownNode* current_node) {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
             .padding = { 0, 8, 0, 0 },
-            .childGap = 4
+            .childGap = 8
         },
     }) {
         if (g_current_list_mode == LIST_MODE_ORDERED) {
-            CLAY_TEXT(CLAY_STRING("*"), &g_font_body_regular);
+            CLAY_AUTO_ID({
+                    .layout = {
+                    .padding = { 4, 4, 4, 4 },
+                    },
+                    .backgroundColor = COLOR_BLUE
+                    }) {
+                CLAY_TEXT(CLAY_STRING("1."), &g_font_body_bold);
+            }
         } else {
-            CLAY_TEXT(CLAY_STRING("-"), &g_font_body_regular);
+            CLAY_TEXT(CLAY_STRING("‣ "), &g_font_body_bold);
         }
 
+        // FIX: Se esta perdiendo el primer texto del primer hijo de las listas internas, porque la
+        // lista interna sobreescribe el contenido del nodo, deberia derepente de hacer una copia ?
         for (MarkdownNode* child = current_node->first_child; child; child = child->next_sibling) {
             render_node(child);
         }
