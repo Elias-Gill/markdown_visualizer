@@ -158,7 +158,7 @@ static void free_all_temp_text_buffers(void) {
 // TEXT RENDERING SYSTEM
 // ============================================================================
 
-static void render_text_elements(TextElement* elements, int count, float available_width) {
+static void render_text_elements(TextElement* elements, int count) {
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -187,12 +187,12 @@ static void textline_init(void) {
     g_current_line.char_count = 0;
 }
 
-static void textline_flush(float available_width) {
+static void textline_flush() {
     if (g_current_line.count == 0) {
         return;
     }
 
-    render_text_elements(g_current_line.elements, g_current_line.count, available_width);
+    render_text_elements(g_current_line.elements, g_current_line.count);
     g_current_line.count = 0;
     g_current_line.char_count = 0;
 }
@@ -201,7 +201,7 @@ static void textline_push(const char* source, int length,
                           Clay_TextElementConfig* config, float available_width) {
     // If line is full, flush before pushing more
     if (g_current_line.count >= MAX_TEXT_ELEMENTS) {
-        textline_flush(available_width);
+        textline_flush();
     }
 
     // Check if adding this text exceeds max characters allowed
@@ -223,7 +223,7 @@ static void textline_push(const char* source, int length,
 
         // Push first part
         textline_push(source, wrap_pos, config, available_width);
-        textline_flush(available_width);
+        textline_flush();
 
         // Push remainder recursively (skip space if any)
         int remainder_start = wrap_pos;
@@ -249,7 +249,7 @@ static void textline_push(const char* source, int length,
 
     // Flush if reached limit exactly
     if (g_current_line.char_count >= g_available_characters) {
-        textline_flush(available_width);
+        textline_flush();
     }
 }
 
@@ -530,7 +530,7 @@ static void render_text_node(MarkdownNode* node, float available_width) {
     while (consumed < length) {
         int available_space = g_available_characters - g_current_line.char_count;
         if (available_space <= 0) {
-            textline_flush(available_width);
+            textline_flush();
         }
 
         int remaining = length - consumed;
@@ -744,7 +744,7 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
                     child = child->next_sibling) {
                 render_node(child, text_available_width);
             }
-            textline_flush(available_width);
+            textline_flush();
         }
     }
 }
@@ -774,7 +774,7 @@ static void render_block(MarkdownNode* current_node, float available_width) {
                     child = child->next_sibling) {
                 render_text_node(child, content_width);
             }
-            textline_flush(content_width);
+            textline_flush();
             break;
 
         case MD_BLOCK_H:
@@ -795,14 +795,14 @@ static void render_block(MarkdownNode* current_node, float available_width) {
 
         case MD_BLOCK_UL:
             g_current_list_mode = LIST_MODE_UNORDERED;
-            textline_flush(available_width); // flush father elements after rendering inner
+            textline_flush(); // flush father elements after rendering inner
                                              // lists if present.
             render_unordered_list(current_node, content_width);
             break;
 
         case MD_BLOCK_OL:
             g_current_list_mode = LIST_MODE_ORDERED;
-            textline_flush(available_width);
+            textline_flush();
             render_ordered_list(current_node, content_width);
             break;
 
