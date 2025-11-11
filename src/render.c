@@ -47,12 +47,8 @@
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
 #define MAIN_LAYOUT_ID "main_layout"
 #define CONTENT_WIDTH_PX (GetScreenWidth() * 0.95f)
-#define MAX_TEXT_ELEMENTS 256
-#define INITIAL_TEMP_TEXT_CAPACITY 256
-#define HR_SCALING_FACTOR 0.8f
-#define SCROLL_MULTIPLIER 4.5f
 #define LEFT_PADDING_DIVISOR 8
-#define FONT_SCALE_FACTOR 2
+#define HR_SCALING_FACTOR 0.8f
 
 // List modes
 typedef enum {
@@ -76,8 +72,11 @@ typedef enum {
 // GLOBAL VARIABLES
 // ============================================================================
 
+#define BASE_FONT_SIZE 22
+#define FONT_SCALE_FACTOR 2
+
 static bool g_debug_enabled = true;
-static int g_base_font_size = 22;
+static int g_base_font_size = BASE_FONT_SIZE;
 static ListMode g_current_list_mode = LIST_MODE_ORDERED;
 
 // Fonts
@@ -96,6 +95,9 @@ static Clay_TextElementConfig g_font_inline_code;
 
 // Text rendering system
 static int g_available_characters = 0;
+
+#define MAX_TEXT_ELEMENTS 256
+#define INITIAL_TEMP_TEXT_CAPACITY 256
 
 typedef struct {
     Clay_String string;
@@ -764,41 +766,70 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
 // SCROLL INPUT HANDLING
 // ============================================================================
 
-#define SCROLL_KEY_REPEAT_DELAY 0.3f
-#define SCROLL_KEY_SPEED 300.0f
+#define SCROLL_KEY_REPEAT_START_DELAY 0.25f
+#define SCROLL_KEY_REPEAT_DELAY 0.10f
+#define SCROLL_KEY_SPEED 1.2f
+#define SCROLL_MULTIPLIER 5.0f
 
-static float g_key_timers[] = {0, 0, 0, 0}; // J, K, H, L
-static const KeyboardKey g_scroll_keys[] = {KEY_J, KEY_K, KEY_H, KEY_L};
-static const Vector2 g_scroll_directions[] = {
-    {0, -1},  // J - down
-    {0, 1},   // K - up
-    {-1, 0},  // H - left
-    {1, 0}    // L - right
+typedef struct {
+    KeyboardKey key;
+    Vector2 direction;
+    float timer;
+    bool repeating;
+    float speed_multiplier;
+} ScrollKey;
+
+static ScrollKey g_scroll_keys[] = {
+    {.key = KEY_J, .direction = {0, -1}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // down
+    {.key = KEY_K, .direction = {0,  1}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // up
+    {.key = KEY_H, .direction = {-1, 0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // left
+    {.key = KEY_L, .direction = {1,  0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // right
+    {.key = KEY_D, .direction = {0, -1}, .timer = 0, .repeating = false, .speed_multiplier = 6.2f},  // half page down
+    {.key = KEY_U, .direction = {0,  1}, .timer = 0, .repeating = false, .speed_multiplier = 6.2f}   // half page up
 };
 
 static void handle_vim_scroll_motions(void) {
     float delta_time = GetFrameTime();
     Vector2 scroll_delta = {0};
 
-    for (int i = 0; i < 4; i++) {
-        if (IsKeyDown(g_scroll_keys[i])) {
-            g_key_timers[i] += delta_time;
-            if (g_key_timers[i] >= SCROLL_KEY_REPEAT_DELAY) {
-                scroll_delta.x += g_scroll_directions[i].x * SCROLL_KEY_SPEED * delta_time;
-                scroll_delta.y += g_scroll_directions[i].y * SCROLL_KEY_SPEED * delta_time;
+    for (int i = 0; i < (int)(sizeof(g_scroll_keys) / sizeof(g_scroll_keys[0])); i++) {
+        ScrollKey *k = &g_scroll_keys[i];
+
+        if (IsKeyDown(k->key)) {
+            k->timer += delta_time;
+            if (!k->repeating) {
+                // First press should actuate inmediatelly
+                if (k->timer == delta_time) {
+                    scroll_delta.x += k->direction.x * SCROLL_KEY_SPEED * k->speed_multiplier;
+                    scroll_delta.y += k->direction.y * SCROLL_KEY_SPEED * k->speed_multiplier;
+                }
+                // Repetetion starts after the initial start_delay
+                else if (k->timer >= SCROLL_KEY_REPEAT_START_DELAY) {
+                    k->repeating = true;
+                    k->timer = 0;
+                }
+            } else {
+                // The key is now repited (with less delay)
+                if (k->timer >= SCROLL_KEY_REPEAT_DELAY) {
+                    scroll_delta.x += k->direction.x * SCROLL_KEY_SPEED * k->speed_multiplier;
+                    scroll_delta.y += k->direction.y * SCROLL_KEY_SPEED * k->speed_multiplier;
+                    k->timer = 0;
+                }
             }
         } else {
-            g_key_timers[i] = 0;
+            k->timer = 0;
+            k->repeating = false;
         }
     }
 
+    // Update CLAY scroll containers
     if (scroll_delta.x != 0 || scroll_delta.y != 0) {
         Clay_UpdateScrollContainers(
             true,
-            (Clay_Vector2) {
-                scroll_delta.x, scroll_delta.y * SCROLL_MULTIPLIER
-            },
-            delta_time
+        (Clay_Vector2) {
+            scroll_delta.x, scroll_delta.y * SCROLL_MULTIPLIER
+        },
+        delta_time
         );
     }
 }
@@ -878,12 +909,17 @@ void start_main_loop(void) {
         }
 
         if (IsKeyPressed(KEY_EQUAL)) {
-            g_base_font_size += 2;
+            g_base_font_size += 1;
             reset_font_styles();
         }
 
         if (IsKeyPressed(KEY_MINUS)) {
-            g_base_font_size -= 2;
+            g_base_font_size -= 1;
+            reset_font_styles();
+        }
+
+        if (IsKeyPressed(KEY_ZERO)) {
+            g_base_font_size = BASE_FONT_SIZE;
             reset_font_styles();
         }
 
