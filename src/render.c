@@ -46,8 +46,6 @@
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
 #define MAIN_LAYOUT_ID "main_layout"
-#define CONTENT_WIDTH_PX (GetScreenWidth() * 0.95f)
-#define LEFT_PADDING_DIVISOR 8
 #define HR_SCALING_FACTOR 0.8f
 
 // List modes
@@ -160,23 +158,23 @@ static void free_all_temp_text_buffers(void) {
 // TEXT RENDERING SYSTEM
 // ============================================================================
 
-static void render_text_elements(TextElement* elements, int count) {
+static void render_text_elements(TextElement* elements, int count, float available_width) {
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .childGap = 0,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-            }) {
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+    }) {
         CLAY_AUTO_ID({
-                .layout = {
+            .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .childGap = 0,
                 .sizing = { .width = CLAY_SIZING_GROW(0) }
-                },
-                .backgroundColor = COLOR_BACKGROUND,
-                }) {
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+        }) {
             for (int i = 0; i < count; ++i) {
                 CLAY_TEXT(elements[i].string, elements[i].config);
             }
@@ -189,22 +187,56 @@ static void textline_init(void) {
     g_current_line.char_count = 0;
 }
 
-static void textline_flush(void) {
+static void textline_flush(float available_width) {
     if (g_current_line.count == 0) {
         return;
     }
 
-    render_text_elements(g_current_line.elements, g_current_line.count);
+    render_text_elements(g_current_line.elements, g_current_line.count, available_width);
     g_current_line.count = 0;
     g_current_line.char_count = 0;
 }
 
 static void textline_push(const char* source, int length,
-                          Clay_TextElementConfig* config) {
+                          Clay_TextElementConfig* config, float available_width) {
+    // If line is full, flush before pushing more
     if (g_current_line.count >= MAX_TEXT_ELEMENTS) {
-        textline_flush();
+        textline_flush(available_width);
     }
 
+    // Check if adding this text exceeds max characters allowed
+    if (g_current_line.char_count + length > g_available_characters) {
+        // Find last space within the allowed range to wrap
+        int wrap_pos = -1;
+        int max_len = g_available_characters - g_current_line.char_count;
+        for (int i = max_len; i > 0; i--) {
+            if (source[i-1] == ' ') {
+                wrap_pos = i;
+                break;
+            }
+        }
+
+        // If no space found, just break at max_len
+        if (wrap_pos == -1) {
+            wrap_pos = max_len;
+        }
+
+        // Push first part
+        textline_push(source, wrap_pos, config, available_width);
+        textline_flush(available_width);
+
+        // Push remainder recursively (skip space if any)
+        int remainder_start = wrap_pos;
+        while (remainder_start < length && source[remainder_start] == ' ') {
+            remainder_start++;
+        }
+        if (remainder_start < length) {
+            textline_push(source + remainder_start, length - remainder_start, config, available_width);
+        }
+        return;
+    }
+
+    // Normal push if space is available
     char* buffer = malloc(length + 1);
     memcpy(buffer, source, length);
     buffer[length] = '\0';
@@ -215,8 +247,9 @@ static void textline_push(const char* source, int length,
     g_current_line.count++;
     g_current_line.char_count += length;
 
+    // Flush if reached limit exactly
     if (g_current_line.char_count >= g_available_characters) {
-        textline_flush();
+        textline_flush(available_width);
     }
 }
 
@@ -450,9 +483,9 @@ static void initialize_clay(void) {
 // NODE RENDERING FUNCTIONS
 // ============================================================================
 
-static void render_node(MarkdownNode* current_node);
+static void render_node(MarkdownNode* current_node, float available_width);
 
-static void render_text_node(MarkdownNode* node) {
+static void render_text_node(MarkdownNode* node, float available_width) {
     const char* text = NULL;
     int length = 0;
     Clay_TextElementConfig* config = &g_font_body_regular;
@@ -460,7 +493,7 @@ static void render_text_node(MarkdownNode* node) {
     switch (node->type) {
     case NODE_TEXT:
         if (node->value.text.type == MD_TEXT_SOFTBR) {
-            textline_push(" ", 1, &g_font_body_regular);
+            textline_push(" ", 1, &g_font_body_regular, available_width);
         }
         text = node->value.text.text;
         length = node->value.text.size;
@@ -497,17 +530,17 @@ static void render_text_node(MarkdownNode* node) {
     while (consumed < length) {
         int available_space = g_available_characters - g_current_line.char_count;
         if (available_space <= 0) {
-            textline_flush();
+            textline_flush(available_width);
         }
 
         int remaining = length - consumed;
         int chunk_size = (remaining > available_space) ? available_space : remaining;
-        textline_push(text + consumed, chunk_size, config);
+        textline_push(text + consumed, chunk_size, config, available_width);
         consumed += chunk_size;
     }
 }
 
-static void render_heading(MarkdownNode* node) {
+static void render_heading(MarkdownNode* node, float available_width) {
     MD_BLOCK_H_DETAIL* detail = (MD_BLOCK_H_DETAIL*) node->value.block.detail;
     unsigned int level = detail->level;
     char* text = node->first_child->value.text.text;
@@ -535,22 +568,28 @@ static void render_heading(MarkdownNode* node) {
     CLAY_TEXT(make_clay_string(text, size), config);
 }
 
-static void render_horizontal_rule(void) {
+static void render_horizontal_rule(float available_width) {
+    float content_width = available_width * HR_SCALING_FACTOR;
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_GROW(0, CONTENT_WIDTH_PX * HR_SCALING_FACTOR) }
+            .sizing = { .width = CLAY_SIZING_GROW(0, content_width) }
         },
         .border = { .width = { .top = 2 }, .color = COLOR_BLUE }
     }) {};
 }
 
-static void render_code_block(MarkdownNode* node) {
+static void render_code_block(MarkdownNode* node, float available_width) {
+    const float padding_top = 16;
+    const float padding_right = 16;
+    const float padding_bottom = 16;
+    const float padding_left = 16;
+
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-            .padding = { 16, 16, 16, 16 }
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
+            .padding = { padding_top, padding_right, padding_bottom, padding_left }
         },
         .cornerRadius = 4,
         .backgroundColor = COLOR_DIM,
@@ -569,12 +608,20 @@ static void render_code_block(MarkdownNode* node) {
     };
 }
 
-static void render_quote_block(MarkdownNode* node) {
+static void render_quote_block(MarkdownNode* node, float available_width) {
+    const float padding_top = 16;
+    const float padding_right = 16;
+    const float padding_bottom = 16;
+    const float padding_left = 16;
+
+    // Total horizontal padding = left + right
+    const float total_horizontal_padding = padding_left + padding_right;
+
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-            .padding = { 16, 16, 16, 16 }
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
+            .padding = { padding_top, padding_right, padding_bottom, padding_left }
         },
         .cornerRadius = 4,
         .border = { .width = { .left = 3 }, .color = COLOR_PINK },
@@ -584,136 +631,183 @@ static void render_quote_block(MarkdownNode* node) {
             .childOffset = Clay_GetScrollOffset()
         }
     }) {
+        float content_width = available_width - total_horizontal_padding;
+
         for (MarkdownNode* child = node->first_child; child; child = child->next_sibling) {
-            render_node(child);
+            render_node(child, content_width);
         }
     }
 }
 
-static void render_ordered_list(MarkdownNode* current_node) {
+static void render_ordered_list(MarkdownNode* current_node, float available_width) {
     if (!current_node->first_child) {
         return;
     }
 
+    const float padding_top = 8;
+    const float padding_right = 0;
+    const float padding_bottom = 8;
+    const float padding_left = 8;
+    const float child_gap = 8;
+
+    // Total horizontal padding = left + right
+    const float total_horizontal_padding = padding_left + padding_right;
+
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-            .padding = { 16, 0, 8, 8 }
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
+            .padding = { padding_top, padding_right, padding_bottom, padding_left },
+            .childGap = child_gap,
         },
     }) {
+        float content_width = available_width - total_horizontal_padding;
+
         for (MarkdownNode* child = current_node->first_child; child;
                 child = child->next_sibling) {
-            render_node(child);
+            render_node(child, content_width);
         }
     }
 }
 
-static void render_unordered_list(MarkdownNode* current_node) {
+static void render_unordered_list(MarkdownNode* current_node, float available_width) {
     if (!current_node->first_child) {
         return;
     }
 
+    const float padding_top = 8;
+    const float padding_right = 0;
+    const float padding_bottom = 8;
+    const float padding_left = 16;
+    const float child_gap = 8;
+
+    // Total horizontal padding = left + right
+    const float total_horizontal_padding = padding_left + padding_right;
+
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-            .padding = { 16, 0, 8, 8 }
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
+            .padding = { padding_top, padding_right, padding_bottom, padding_left },
+            .childGap = child_gap,
         },
     }) {
+        // Subtract horizontal padding from available width
+        float content_width = available_width - total_horizontal_padding;
+
         for (MarkdownNode* child = current_node->first_child; child;
                 child = child->next_sibling) {
-            render_node(child);
+            render_node(child, content_width);
         }
     }
 }
 
-static void render_list_item(MarkdownNode* current_node) {
+static void render_list_item(MarkdownNode* current_node, float available_width) {
     if (!current_node->first_child) return;
+
+    const float padding_left = 8;
+    const float child_gap = 8;
+    const float bullet_and_padding = g_base_font_size * 4 + 4;
+    // Calculate available width for text content subtracting bullet space and padding
+    float text_available_width = available_width - bullet_and_padding;
 
     textline_init();
 
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
-            .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-            .padding = { 0, 8, 0, 0 },
-            .childGap = 8
+            .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
+            .padding = { 0, padding_left, 0, 0 },
+            .childGap = child_gap
         },
     }) {
         if (g_current_list_mode == LIST_MODE_ORDERED) {
             CLAY_AUTO_ID({
-                    .layout = {
+                .layout = {
                     .padding = { 4, 4, 4, 4 },
-                    },
-                    .backgroundColor = COLOR_BLUE
-                    }) {
+                },
+                .backgroundColor = COLOR_BLUE
+            }) {
                 CLAY_TEXT(CLAY_STRING("1."), &g_font_body_bold);
             }
         } else {
             CLAY_TEXT(CLAY_STRING("‣ "), &g_font_body_bold);
         }
 
-        // FIX: Se esta perdiendo el primer texto del primer hijo de las listas internas, porque la
-        // lista interna sobreescribe el contenido del nodo, deberia derepente de hacer una copia ?
-        for (MarkdownNode* child = current_node->first_child; child; child = child->next_sibling) {
-            render_node(child);
+        CLAY_AUTO_ID({
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+                .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
+            },
+        }) {
+            for (MarkdownNode* child = current_node->first_child; child;
+                    child = child->next_sibling) {
+                render_node(child, text_available_width);
+            }
+            textline_flush(available_width);
         }
-        textline_flush();
     }
-
 }
 
-static void render_block(MarkdownNode* current_node) {
+static void render_block(MarkdownNode* current_node, float available_width) {
+    const float padding = 1;
+    const float child_gap = 2;
+    const float total_spacing = padding * 2 + child_gap;
+
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .padding = {1, 1, 1, 1},
-            .childGap = 2,
+            .padding = {padding, padding, padding, padding},
+            .childGap = child_gap,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
         },
         .backgroundColor = COLOR_BACKGROUND,
     }) {
         ListMode previous_list_mode = g_current_list_mode;
 
+        float content_width = available_width - total_spacing;
+
         switch (current_node->value.block.type) {
         case MD_BLOCK_P:
             textline_init();
             for (MarkdownNode* child = current_node->first_child; child;
                     child = child->next_sibling) {
-                render_text_node(child);
+                render_text_node(child, content_width);
             }
-            textline_flush();
+            textline_flush(content_width);
             break;
 
         case MD_BLOCK_H:
-            render_heading(current_node);
+            render_heading(current_node, content_width);
             break;
 
         case MD_BLOCK_HR:
-            render_horizontal_rule();
+            render_horizontal_rule(content_width);
             break;
 
         case MD_BLOCK_CODE:
-            render_code_block(current_node);
+            render_code_block(current_node, content_width);
             break;
 
         case MD_BLOCK_QUOTE:
-            render_quote_block(current_node);
+            render_quote_block(current_node, content_width);
             break;
 
         case MD_BLOCK_UL:
             g_current_list_mode = LIST_MODE_UNORDERED;
-            render_unordered_list(current_node);
+            textline_flush(available_width); // flush father elements after rendering inner
+                                             // lists if present.
+            render_unordered_list(current_node, content_width);
             break;
 
         case MD_BLOCK_OL:
             g_current_list_mode = LIST_MODE_ORDERED;
-            render_ordered_list(current_node);
+            textline_flush(available_width);
+            render_ordered_list(current_node, content_width);
             break;
 
         case MD_BLOCK_LI:
-            render_list_item(current_node);
+            render_list_item(current_node, content_width);
             break;
 
         default:
@@ -724,15 +818,21 @@ static void render_block(MarkdownNode* current_node) {
     }
 }
 
-static void render_node(MarkdownNode* current_node) {
+static void render_node(MarkdownNode* current_node, float available_width) {
     switch (current_node->type) {
     case NODE_BLOCK:
-        render_block(current_node);
+        render_block(current_node, available_width);
         break;
 
     case NODE_TEXT:
     case NODE_SPAN:
-        render_text_node(current_node);
+        CLAY_AUTO_ID({
+            .layout = {
+                .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            },
+        }) {
+            render_text_node(current_node, available_width);
+        }
         break;
     }
 }
@@ -746,12 +846,14 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
 
     Clay_BeginLayout();
 
-    int left_padding = (int)(GetScreenWidth() / LEFT_PADDING_DIVISOR);
+    int left_padding = (int)(GetScreenWidth() / 8);
+    int right_padding = 56;
+    float available_width = GetScreenWidth() - left_padding - right_padding;
 
     CLAY(CLAY_ID(MAIN_LAYOUT_ID), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            .padding = { left_padding, 0, 46, 56 },
+            .padding = { left_padding, 0, 46, right_padding },
             .childGap = 16,
             .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
             .sizing = {
@@ -767,7 +869,7 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
         }
     }) {
         for (MarkdownNode* child = root_node->first_child; child; child = child->next_sibling) {
-            render_node(child);
+            render_node(child, available_width);
         }
     }
 
