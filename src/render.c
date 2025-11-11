@@ -162,15 +162,24 @@ static void free_all_temp_text_buffers(void) {
 
 static void render_text_elements(TextElement* elements, int count) {
     CLAY_AUTO_ID({
-        .layout = {
-            .layoutDirection = CLAY_LEFT_TO_RIGHT,
+            .layout = {
+            .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .childGap = 0,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-        },
-        .backgroundColor = COLOR_BACKGROUND,
-    }) {
-        for (int i = 0; i < count; ++i) {
-            CLAY_TEXT(elements[i].string, elements[i].config);
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+            }) {
+        CLAY_AUTO_ID({
+                .layout = {
+                .layoutDirection = CLAY_LEFT_TO_RIGHT,
+                .childGap = 0,
+                .sizing = { .width = CLAY_SIZING_GROW(0) }
+                },
+                .backgroundColor = COLOR_BACKGROUND,
+                }) {
+            for (int i = 0; i < count; ++i) {
+                CLAY_TEXT(elements[i].string, elements[i].config);
+            }
         }
     }
 }
@@ -527,8 +536,7 @@ static void render_horizontal_rule(void) {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = { .width = CLAY_SIZING_GROW(0, CONTENT_WIDTH_PX * HR_SCALING_FACTOR) }
         },
-        .backgroundColor = COLOR_BACKGROUND,
-        .border = { .width = { .top = 2 }, .color = COLOR_DIM }
+        .border = { .width = { .top = 2 }, .color = COLOR_BLUE }
     }) {};
 }
 
@@ -542,7 +550,7 @@ static void render_code_block(MarkdownNode* node) {
         .cornerRadius = 4,
         .backgroundColor = COLOR_DIM,
         .clip = {
-            .vertical = true,
+            .vertical = false,
             .horizontal = true,
             .childOffset = Clay_GetScrollOffset()
         }
@@ -566,7 +574,7 @@ static void render_quote_block(MarkdownNode* node) {
         .cornerRadius = 4,
         .border = { .width = { .left = 3 }, .color = COLOR_PINK },
         .clip = {
-            .vertical = true,
+            .vertical = false,
             .horizontal = true,
             .childOffset = Clay_GetScrollOffset()
         }
@@ -608,48 +616,37 @@ static void render_unordered_list(MarkdownNode* current_node) {
             .padding = { 16, 0, 8, 8 }
         },
     }) {
-        for (MarkdownNode* child = current_node->first_child; child;
-                child = child->next_sibling) {
+        for (MarkdownNode* child = current_node->first_child; child; child = child->next_sibling) {
             render_node(child);
         }
     }
 }
 
 static void render_list_item(MarkdownNode* current_node) {
-    textline_init();
+    if (!current_node->first_child) return;
 
-    if (!current_node->first_child) {
-        return;
-    }
+    textline_init();
 
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-            .padding = { 0, 8, 0, 0 }
+            .padding = { 0, 8, 0, 0 },
+            .childGap = 4
         },
     }) {
         if (g_current_list_mode == LIST_MODE_ORDERED) {
-            CLAY_TEXT(CLAY_STRING("* "), &g_font_body_regular);
+            CLAY_TEXT(CLAY_STRING("*"), &g_font_body_regular);
         } else {
-            CLAY_TEXT(CLAY_STRING("- "), &g_font_body_regular);
+            CLAY_TEXT(CLAY_STRING("-"), &g_font_body_regular);
         }
 
-        CLAY_AUTO_ID({
-            .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-                .sizing = { .width = CLAY_SIZING_FIT(0, CONTENT_WIDTH_PX) },
-                .padding = { 0, 8, 0, 0 }
-            },
-        }) {
-            for (MarkdownNode* child = current_node->first_child; child;
-                    child = child->next_sibling) {
-                render_node(child);
-            }
+        for (MarkdownNode* child = current_node->first_child; child; child = child->next_sibling) {
+            render_node(child);
         }
+        textline_flush();
     }
 
-    textline_flush();
 }
 
 static void render_block(MarkdownNode* current_node) {
@@ -750,7 +747,7 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
         .backgroundColor = COLOR_BACKGROUND,
         .clip = {
             .vertical = true,
-            .horizontal = true,
+            .horizontal = false,
             .childOffset = Clay_GetScrollOffset()
         }
     }) {
@@ -766,10 +763,11 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
 // SCROLL INPUT HANDLING
 // ============================================================================
 
+// TODO: make the scroll behavior change acording to the screen size and make it more fluid
 #define SCROLL_KEY_REPEAT_START_DELAY 0.25f
 #define SCROLL_KEY_REPEAT_DELAY 0.10f
 #define SCROLL_KEY_SPEED 1.2f
-#define SCROLL_MULTIPLIER 5.0f
+#define SCROLL_MULTIPLIER 4.9f
 
 typedef struct {
     KeyboardKey key;
@@ -840,7 +838,7 @@ static void handle_vim_scroll_motions(void) {
 
 static void update_frame(void) {
     // Handle debug toggle
-    if (IsKeyPressed(KEY_D)) {
+    if (IsKeyPressed(KEY_BACKSPACE)) {
         g_debug_enabled = !g_debug_enabled;
         Clay_SetDebugModeEnabled(g_debug_enabled);
     }
