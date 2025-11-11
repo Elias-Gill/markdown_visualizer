@@ -36,7 +36,7 @@
 #define COLOR_DIM        (Clay_Color){90, 90, 90, 190}     // #5A5A5A
 #define COLOR_PINK       (Clay_Color){235, 120, 175, 255}  // #EB78AF
 #define COLOR_BLUE       (Clay_Color){122, 201, 255, 255}  // #7AC9FF
-#define COLOR_ORANGE     (Clay_Color){255, 170, 100, 255}  // #FFAA64
+#define COLOR_ORANGE     (Clay_Color){230, 140, 50, 255}   // #E68C32
 #define COLOR_BORDER     (Clay_Color){60, 60, 60, 255}     // #3C3C3C
 #define COLOR_DARK       (Clay_Color){20, 20, 20, 255}     // #141414
 #define COLOR_HOVER      (Clay_Color){45, 45, 45, 255}     // #2D2D2D
@@ -124,6 +124,17 @@ static inline Clay_String make_clay_string(char* text, long length) {
         .isStaticallyAllocated = false,
         .length = length,
         .chars = text,
+    };
+}
+
+static inline Clay_String make_clay_string_copy(const char* text, size_t length) {
+    char* copy = malloc(length);
+    if (!copy) exit(1);
+    memcpy(copy, text, length);
+    return (Clay_String){
+        .isStaticallyAllocated = false,
+        .length = length,
+        .chars = copy,
     };
 }
 
@@ -634,10 +645,14 @@ static void render_quote_block(MarkdownNode* node, float available_width) {
     }
 }
 
+int list_item_index = 1;
+
 static void render_ordered_list(MarkdownNode* current_node, float available_width) {
     if (!current_node->first_child) {
         return;
     }
+
+    int previous_index = list_item_index;
 
     const float padding_top = 8;
     const float padding_right = 0;
@@ -663,6 +678,9 @@ static void render_ordered_list(MarkdownNode* current_node, float available_widt
             render_node(child, content_width);
         }
     }
+
+    // Reset to the previous index
+    list_item_index = previous_index;
 }
 
 static void render_unordered_list(MarkdownNode* current_node, float available_width) {
@@ -702,7 +720,7 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
 
     const float padding_left = 8;
     const float child_gap = 8;
-    const float bullet_and_padding = g_base_font_size * 4 + 4;
+    const float bullet_and_padding = g_base_font_size * 4 + 16 + padding_left + child_gap;
     // Calculate available width for text content subtracting bullet space and padding
     float text_available_width = available_width - bullet_and_padding;
 
@@ -719,11 +737,14 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
         if (g_current_list_mode == LIST_MODE_ORDERED) {
             CLAY_AUTO_ID({
                 .layout = {
-                    .padding = { 4, 4, 4, 4 },
+                    .padding = { 8, 8, 4, 4 },
                 },
-                .backgroundColor = COLOR_BLUE
+                .backgroundColor = COLOR_ORANGE
             }) {
-                CLAY_TEXT(CLAY_STRING("1."), &g_font_body_bold);
+                char index[4];
+                int len = sprintf(index, "%d", list_item_index);
+                CLAY_TEXT(make_clay_string_copy(index, len), &g_font_body_bold);
+                list_item_index++;
             }
         } else {
             CLAY_TEXT(CLAY_STRING("‣ "), &g_font_body_bold);
