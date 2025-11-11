@@ -197,8 +197,7 @@ static void textline_flush() {
     g_current_line.char_count = 0;
 }
 
-static void textline_push(const char* source, int length,
-                          Clay_TextElementConfig* config, float available_width) {
+static void textline_push(const char* source, int length, Clay_TextElementConfig* config) {
     // If line is full, flush before pushing more
     if (g_current_line.count >= MAX_TEXT_ELEMENTS) {
         textline_flush();
@@ -222,7 +221,7 @@ static void textline_push(const char* source, int length,
         }
 
         // Push first part
-        textline_push(source, wrap_pos, config, available_width);
+        textline_push(source, wrap_pos, config);
         textline_flush();
 
         // Push remainder recursively (skip space if any)
@@ -231,7 +230,7 @@ static void textline_push(const char* source, int length,
             remainder_start++;
         }
         if (remainder_start < length) {
-            textline_push(source + remainder_start, length - remainder_start, config, available_width);
+            textline_push(source + remainder_start, length - remainder_start, config);
         }
         return;
     }
@@ -493,7 +492,7 @@ static void render_text_node(MarkdownNode* node, float available_width) {
     switch (node->type) {
     case NODE_TEXT:
         if (node->value.text.type == MD_TEXT_SOFTBR) {
-            textline_push(" ", 1, &g_font_body_regular, available_width);
+            textline_push(" ", 1, &g_font_body_regular);
         }
         text = node->value.text.text;
         length = node->value.text.size;
@@ -526,18 +525,7 @@ static void render_text_node(MarkdownNode* node, float available_width) {
         return;
     }
 
-    int consumed = 0;
-    while (consumed < length) {
-        int available_space = g_available_characters - g_current_line.char_count;
-        if (available_space <= 0) {
-            textline_flush();
-        }
-
-        int remaining = length - consumed;
-        int chunk_size = (remaining > available_space) ? available_space : remaining;
-        textline_push(text + consumed, chunk_size, config, available_width);
-        consumed += chunk_size;
-    }
+    textline_push(text, length, config);
 }
 
 static void render_heading(MarkdownNode* node, float available_width) {
@@ -678,7 +666,7 @@ static void render_unordered_list(MarkdownNode* current_node, float available_wi
     const float padding_top = 8;
     const float padding_right = 0;
     const float padding_bottom = 8;
-    const float padding_left = 16;
+    const float padding_left = 8;
     const float child_gap = 8;
 
     // Total horizontal padding = left + right
@@ -794,9 +782,9 @@ static void render_block(MarkdownNode* current_node, float available_width) {
             break;
 
         case MD_BLOCK_UL:
+            // Flush father elements after rendering inner lists if present.
+            textline_flush(); 
             g_current_list_mode = LIST_MODE_UNORDERED;
-            textline_flush(); // flush father elements after rendering inner
-                                             // lists if present.
             render_unordered_list(current_node, content_width);
             break;
 
