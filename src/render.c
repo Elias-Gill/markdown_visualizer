@@ -20,27 +20,27 @@
 
 // Color palette
 #ifdef WHITE_MODE
-#define COLOR_BACKGROUND (Clay_Color){244, 244, 244, 255}  // #f4f4f4
-#define COLOR_FOREGROUND (Clay_Color){34, 34, 34, 255}     // #222222
-#define COLOR_DIM        (Clay_Color){200, 200, 200, 180}  // #c8c8c8
-#define COLOR_PINK       (Clay_Color){177, 68, 130, 255}   // #b14482
-#define COLOR_BLUE       (Clay_Color){60, 163, 116, 255}   // #3CA374
-#define COLOR_ORANGE     (Clay_Color){210, 132, 79, 255}   // #d2844f
-#define COLOR_BORDER     (Clay_Color){199, 199, 199, 255}  // #c7c7c7
-#define COLOR_DARK       (Clay_Color){232, 232, 232, 255}  // #e8e8e8
-#define COLOR_HOVER      (Clay_Color){221, 221, 221, 255}  // #dddddd
-#define COLOR_HIGHLIGHT  (Clay_Color){210, 210, 213, 255}  // #d2d2d5
+#define COLOR_BACKGROUND (Clay_Color){250, 250, 250, 255}  // #FAFAFA
+#define COLOR_FOREGROUND (Clay_Color){33, 37, 41, 255}     // #212529
+#define COLOR_DIM        (Clay_Color){180, 180, 180, 180}  // #B4B4B4
+#define COLOR_PINK       (Clay_Color){203, 63, 140, 255}   // #CB3F8C
+#define COLOR_BLUE       (Clay_Color){38, 139, 210, 255}   // #268BD2
+#define COLOR_ORANGE     (Clay_Color){230, 140, 50, 255}   // #E68C32
+#define COLOR_BORDER     (Clay_Color){210, 210, 210, 255}  // #D2D2D2
+#define COLOR_DARK       (Clay_Color){238, 238, 238, 255}  // #EEEEEE
+#define COLOR_HOVER      (Clay_Color){230, 230, 230, 255}  // #E6E6E6
+#define COLOR_HIGHLIGHT  (Clay_Color){218, 232, 252, 255}  // #DAE8FC
 #else // ----- DARK MODE -----
-#define COLOR_BACKGROUND (Clay_Color){34, 35, 35, 255}     // #222323
-#define COLOR_FOREGROUND (Clay_Color){222, 222, 222, 255}  // #dedede
-#define COLOR_DIM        (Clay_Color){60, 60, 60, 190}     // #3C3C3C
-#define COLOR_PINK       (Clay_Color){196, 146, 177, 255}  // #C492b1
-#define COLOR_BLUE       (Clay_Color){151, 215, 189, 255}  // #97D7BD
-#define COLOR_ORANGE     (Clay_Color){230, 185, 157, 255}  // #e6b99d
-#define COLOR_BORDER     (Clay_Color){88, 88, 88, 255}     // #585858
-#define COLOR_DARK       (Clay_Color){25, 25, 25, 255}     // #191919
-#define COLOR_HOVER      (Clay_Color){47, 47, 47, 255}     // #2f2f2f
-#define COLOR_HIGHLIGHT  (Clay_Color){59, 59, 62, 255}     // #3b3b3e
+#define COLOR_BACKGROUND (Clay_Color){28, 28, 30, 255}     // #1C1C1E
+#define COLOR_FOREGROUND (Clay_Color){230, 230, 230, 255}  // #E6E6E6
+#define COLOR_DIM        (Clay_Color){90, 90, 90, 190}     // #5A5A5A
+#define COLOR_PINK       (Clay_Color){235, 120, 175, 255}  // #EB78AF
+#define COLOR_BLUE       (Clay_Color){122, 201, 255, 255}  // #7AC9FF
+#define COLOR_ORANGE     (Clay_Color){255, 170, 100, 255}  // #FFAA64
+#define COLOR_BORDER     (Clay_Color){60, 60, 60, 255}     // #3C3C3C
+#define COLOR_DARK       (Clay_Color){20, 20, 20, 255}     // #141414
+#define COLOR_HOVER      (Clay_Color){45, 45, 45, 255}     // #2D2D2D
+#define COLOR_HIGHLIGHT  (Clay_Color){48, 60, 75, 255}     // #303C4B
 #endif
 
 // Utility macros
