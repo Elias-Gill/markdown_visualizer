@@ -885,8 +885,8 @@ typedef struct {
 static ScrollKey g_scroll_keys[] = {
     {.key = KEY_J, .direction = {0, -1}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // down
     {.key = KEY_K, .direction = {0,  1}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // up
-    {.key = KEY_H, .direction = {-1, 0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // left
-    {.key = KEY_L, .direction = {1,  0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // right
+    {.key = KEY_H, .direction = {1, 0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // left
+    {.key = KEY_L, .direction = {-1,  0}, .timer = 0, .repeating = false, .speed_multiplier = 1.0f},  // right
     {.key = KEY_D, .direction = {0, -1}, .timer = 0, .repeating = false, .speed_multiplier = 6.2f},  // half page down
     {.key = KEY_U, .direction = {0,  1}, .timer = 0, .repeating = false, .speed_multiplier = 6.2f}   // half page up
 };

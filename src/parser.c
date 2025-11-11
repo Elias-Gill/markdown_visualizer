@@ -33,12 +33,12 @@ static void start_text_accumulation(void) {
 }
 
 static void accumulate_text(const MD_CHAR *text, MD_SIZE size) {
-    // old_size stores the stored buffer size including the terminating '\0' when present
+    // old_size stores the stored buffer size
     MD_SIZE old_size = accumulated_text_node->value.text.size;
-    MD_SIZE old_len  = (old_size > 0) ? old_size - 1 : 0; // length without '\0'
+    MD_SIZE old_len  = (old_size > 0) ? old_size: 0;
 
-    MD_SIZE new_len  = old_len + size; // new length without '\0'
-    MD_SIZE new_size = new_len + 1;    // include '\0'
+    MD_SIZE new_len  = old_len + size;
+    MD_SIZE new_size = new_len;
 
     MD_CHAR *old_text = accumulated_text_node->value.text.text;
     MD_CHAR *new_text = malloc(sizeof(MD_CHAR) * new_size);
@@ -52,7 +52,6 @@ static void accumulate_text(const MD_CHAR *text, MD_SIZE size) {
     if (size > 0) {
         memcpy(new_text + old_len, text, size);
     }
-    new_text[new_len] = '\0';
 
     // replace buffer and free old
     free(old_text);
