@@ -106,6 +106,13 @@ static int on_enter_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
         }
         *copy = *(MD_BLOCK_H_DETAIL*)detail;
         node->value.block.detail = copy;
+    } else if (type == MD_BLOCK_OL && detail) {
+        MD_BLOCK_OL_DETAIL *copy = malloc(sizeof(MD_BLOCK_OL_DETAIL));
+        if (!copy) {
+            exit(1);
+        }
+        *copy = *(MD_BLOCK_OL_DETAIL*)detail;
+        node->value.block.detail = copy;
     } else if (type == MD_BLOCK_CODE) {
         start_text_accumulation();
     } else {

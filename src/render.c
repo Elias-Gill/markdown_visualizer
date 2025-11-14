@@ -49,7 +49,6 @@
 // Utility macros
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
 #define MAIN_LAYOUT_ID "main_layout"
-#define HR_SCALING_FACTOR 0.8f
 #define IMG_SCALING_FACTOR 0.6f
 
 // List modes
@@ -240,30 +239,26 @@ ImageInfo* find_or_load_image(const char *raw_path, unsigned path_size) {
     return &images[images_array_pointer];
 }
 
+// Cleans the images array, unloading textures and temporary path strings.
 void clean_images_array() {
     if (images_array_pointer < 0) {
         return;
     }
-    for (int i = 0; i <= images_array_pointer; i++) {
+    for (int i = 0; i < images_array_pointer; i++) {
         ImageInfo info = images[i];
-        // Only unload the texture if the image was successfully loaded
-        if (info.is_image_loaded) {
+        if (info.is_image_loaded && info.image.id > 0) {
             UnloadTexture(info.image);
         }
-        
-        // Free the duplicated path string
-        free(info.path);
+        if (info.path) {
+            free(info.path);
+        }
     }
-    // Reset the array pointer after cleaning
     images_array_pointer = -1;
 }
 
 // ============================================================================
 // TEXT RENDERING SYSTEM
 // ============================================================================
-
-static void render_text_elements(TextElement* elements, int count) {
-}
 
 static void textline_init(void) {
     g_current_line.count = 0;
@@ -303,7 +298,11 @@ static void textline_flush() {
     g_current_line.char_count = 0;
 }
 
-static void textline_push(const char* source, int length, Clay_TextElementConfig* config) {
+static void textline_push(const char* source, int length,
+                          Clay_TextElementConfig* config) {
+    // Disable clays text wrapping
+    config->wrapMode = CLAY_TEXT_WRAP_NONE;
+
     // If line is full, flush before pushing more
     if (g_current_line.count >= MAX_TEXT_ELEMENTS) {
         textline_flush();
@@ -664,11 +663,20 @@ static void render_heading(MarkdownNode* node, float available_width) {
         break;
     }
 
-    CLAY_TEXT(make_clay_string(text, size), config);
+    float content_width = available_width *
+                          0.95; // adds a little dinamyc padding to the right
+    CLAY_AUTO_ID({
+        .layout = {
+            .sizing = { .width = CLAY_SIZING_GROW(0, content_width) }
+        },
+    }) {
+        CLAY_TEXT(make_clay_string(text, size), config);
+    };
 }
 
 static void render_horizontal_rule(float available_width) {
-    float content_width = available_width * HR_SCALING_FACTOR;
+    // Adds a little dinamyc padding to the right
+    float content_width = available_width * 0.95;
     CLAY_AUTO_ID({
         .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
@@ -748,7 +756,7 @@ static void render_ordered_list(MarkdownNode* current_node, float available_widt
     // List starting index
     int previous_index = list_item_index;
     MD_BLOCK_OL_DETAIL* detail = (MD_BLOCK_OL_DETAIL*) current_node->value.block.detail;
-    list_item_index = detail->start + 1;
+    list_item_index = detail->start;
 
     const float padding_top = 8;
     const float padding_right = 0;
@@ -876,7 +884,7 @@ static void render_image(MarkdownNode *node, float available_width) {
             .layout = {
                 .childAlignment = CLAY_ALIGN_X_CENTER,
                 .sizing = { .width = CLAY_SIZING_FIXED(content_width) },
-                .padding = {32, 32, 32, 32},
+                .padding = {content_width / 6, 0, 28, 28},
             },
         }) {
             float max_width = content_width;
@@ -884,8 +892,8 @@ static void render_image(MarkdownNode *node, float available_width) {
             float original_height = (float)info->image.height;
 
             // Scale the image if too big, if not, then keep the original size
-            float width = (original_width > max_width) ? max_width : original_width;
-            width = width - 32; // Apply the containers padding to the image
+            float width = (original_width > content_width) ? content_width : original_width;
+            width = width - content_width / 6; // Apply the containers padding to the image
 
             // Scale height to keep the image ratio
             float height = original_height * (width / original_width);
@@ -899,10 +907,10 @@ static void render_image(MarkdownNode *node, float available_width) {
         }
     } else {
         CLAY_AUTO_ID({
-                .layout = {
-                .padding = {32,32,32,32}, 
-                }
-                }) {
+            .layout = {
+                .padding = {content_width / 6, 0, 28, 28},
+            }
+        }) {
             CLAY_TEXT(CLAY_STRING("🖼 Image not loaded"), &g_font_body_bold);
         }
     }
@@ -1003,10 +1011,11 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
 
     Clay_BeginLayout();
 
-    int left_padding = (int)(GetScreenWidth() / 8);
-    int right_padding = 56;
+    int left_padding = (int)(GetScreenWidth() / 6.5); // Why 6.5 ? I don't know.
+    int right_padding = (int)(GetScreenWidth() / 7); // Same here, but looks nice.
     float available_width = GetScreenWidth() - left_padding - right_padding;
 
+    // Main app container
     CLAY(CLAY_ID(MAIN_LAYOUT_ID), {
         .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -1151,7 +1160,7 @@ static void update_frame(void) {
     });
 
     // Calculate available characters per line
-    g_available_characters = (int)(GetScreenWidth() / (g_base_font_size / 2));
+    g_available_characters = (int)(GetScreenWidth() / (g_base_font_size / 2) - 1);
 
     // Update input state
     Vector2 mouse_position = GetMousePosition();
@@ -1214,8 +1223,6 @@ void start_main_loop(void) {
 
         update_frame();
     }
-
-    CloseWindow();
 }
 
 // ============================================================================
@@ -1235,4 +1242,5 @@ void initialize_application(void) {
     initialize_clay();
     start_main_loop();
     cleanup_application();
+    CloseWindow();
 }
