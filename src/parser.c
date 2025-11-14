@@ -139,8 +139,21 @@ static int on_leave_block(MD_BLOCKTYPE type, void *detail, void *userdata) {
 static int on_enter_span(MD_SPANTYPE type, void *detail, void *userdata) {
     MarkdownNode *node = should_create_node(NODE_SPAN);
 
+    // NOTE: expand for more used details
+    if (type == MD_SPAN_IMG && detail) {
+        MD_SPAN_IMG_DETAIL *copy = malloc(sizeof(MD_SPAN_IMG_DETAIL));
+        if (!copy) {
+            exit(1);
+        }
+        *copy = *(MD_SPAN_IMG_DETAIL*)detail;
+        node->value.block.detail = copy;
+    } else {
+        // FIX: this should be null probably, because md4c is deallocating those pointers after
+        // the callback call.
+        node->value.span.detail = detail;
+    }
+
     node->value.span.type = type;
-    node->value.span.detail = detail;
     node->value.span.userdata = userdata;
 
     insert_child_node(current_node, node);
@@ -342,8 +355,16 @@ void print_tree(const MarkdownNode *node, int indent) {
                    node->value.text.text ? node->value.text.text : "(null)");
             break;
         case NODE_SPAN:
-            printf("[SPAN] type=%s\n",
-                   span_type_name(node->value.span.type));
+            printf("[SPAN] type=%s", span_type_name(node->value.span.type));
+
+            if (node->value.span.type == MD_SPAN_IMG) {
+                MD_SPAN_IMG_DETAIL *detail = (MD_SPAN_IMG_DETAIL*) node->value.span.detail;
+                MD_ATTRIBUTE src = detail->src;
+
+                printf(" | img src=\"%.*s\"", (int)src.size, src.text);
+            }
+
+            printf("\n");
             break;
         case NODE_BLOCK:
             printf("[BLOCK] type=%s\n",

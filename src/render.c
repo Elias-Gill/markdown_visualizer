@@ -14,6 +14,9 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 
+#include <unistd.h>
+#include <stdbool.h>
+
 // ============================================================================
 // CONSTANTS AND CONFIGURATION
 // ============================================================================
@@ -35,7 +38,7 @@
 #define COLOR_FOREGROUND (Clay_Color){230, 230, 230, 255}  // #E6E6E6
 #define COLOR_DIM        (Clay_Color){90, 90, 90, 190}     // #5A5A5A
 #define COLOR_PINK       (Clay_Color){235, 120, 175, 255}  // #EB78AF
-#define COLOR_BLUE       (Clay_Color){122, 201, 255, 255}  // #7AC9FF
+#define COLOR_BLUE       (Clay_Color){120, 180, 190, 200}  // #78B4BEC8
 #define COLOR_ORANGE     (Clay_Color){230, 140, 50, 255}   // #E68C32
 #define COLOR_BORDER     (Clay_Color){60, 60, 60, 255}     // #3C3C3C
 #define COLOR_DARK       (Clay_Color){20, 20, 20, 255}     // #141414
@@ -47,6 +50,7 @@
 #define RAYLIB_VECTOR2_TO_CLAY_VECTOR2(vector) (Clay_Vector2) { .x = vector.x, .y = vector.y }
 #define MAIN_LAYOUT_ID "main_layout"
 #define HR_SCALING_FACTOR 0.8f
+#define IMG_SCALING_FACTOR 0.6f
 
 // List modes
 typedef enum {
@@ -115,9 +119,24 @@ static char** g_temp_text_buffers = NULL;
 static int g_temp_text_count = 0;
 static int g_temp_text_capacity = 0;
 
+// Images storage
+typedef struct {
+    char *path;
+    unsigned path_size;
+    bool is_image_loaded;
+    Texture2D image;
+} ImageInfo;
+
+// This array stores the image data to then be freed when the app is cleaned
+// I mean, more than 200 images inside a markdown file is just absurd man.
+ImageInfo images[256];
+int images_array_pointer = -1;
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+// --- TEXT MANIPULATION FUNCTIONS ---
 
 static inline Clay_String make_clay_string(char* text, long length) {
     return (Clay_String) {
@@ -131,7 +150,7 @@ static inline Clay_String make_clay_string_copy(const char* text, size_t length)
     char* copy = malloc(length);
     if (!copy) exit(1);
     memcpy(copy, text, length);
-    return (Clay_String){
+    return (Clay_String) {
         .isStaticallyAllocated = false,
         .length = length,
         .chars = copy,
@@ -165,6 +184,80 @@ static void free_all_temp_text_buffers(void) {
     g_temp_text_count = 0;
 }
 
+// --- IMAGE LOADING FUNCTIONS ---
+
+// Search for an image inside the images array, if not found, then loads it and returns the
+// pointer to that element.
+ImageInfo* find_or_load_image(const char *raw_path, unsigned path_size) {
+    // Copy image path
+    char path[512];
+    if (path_size >= sizeof(path)) {
+        fprintf(stderr, "Image URL too long\n");
+        exit(1);
+    }
+    memcpy(path, raw_path, path_size);
+    path[path_size] = '\0';
+
+    // Search for the image if already loaded
+    for (int i = 0; i <= images_array_pointer; i++) {
+        if (strcmp(path, images[i].path) == 0) {
+            return &images[i];
+        }
+    }
+
+    // Load the image inside the images array
+    images_array_pointer++;
+    if (images_array_pointer == 256) {
+        fprintf(stderr, "You have too many images inside this file.\n");
+        exit(1);
+    }
+
+    // Duplicate the path string to store it
+    char *stored_path = strdup(path);
+    if (!stored_path) {
+        perror("Error duplicating image path str: strdup");
+        exit(1);
+    }
+
+    Texture2D image;
+
+    bool is_image_loaded = true;
+    if (access(path, F_OK) == 0) {
+        image = LoadTexture(path);
+        printf("Loaded image: '%.*s'\n", path_size, path);
+    } else {
+        printf("Cannot load image: '%.*s'\n", path_size, path);
+        is_image_loaded = false;
+    }
+
+    images[images_array_pointer] = (ImageInfo) {
+        .image = image,
+        .path = stored_path,
+        .path_size = path_size,
+        .is_image_loaded = is_image_loaded
+    };
+
+    return &images[images_array_pointer];
+}
+
+void clean_images_array() {
+    if (images_array_pointer < 0) {
+        return;
+    }
+    for (int i = 0; i <= images_array_pointer; i++) {
+        ImageInfo info = images[i];
+        // Only unload the texture if the image was successfully loaded
+        if (info.is_image_loaded) {
+            UnloadTexture(info.image);
+        }
+        
+        // Free the duplicated path string
+        free(info.path);
+    }
+    // Reset the array pointer after cleaning
+    images_array_pointer = -1;
+}
+
 // ============================================================================
 // TEXT RENDERING SYSTEM
 // ============================================================================
@@ -184,21 +277,21 @@ static void textline_flush() {
 
     // Line container
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .childGap = 0,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-            }) {
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+    }) {
         CLAY_AUTO_ID({
-                .layout = {
+            .layout = {
                 .layoutDirection = CLAY_LEFT_TO_RIGHT,
                 .childGap = 0,
                 .sizing = { .width = CLAY_SIZING_GROW(0) }
-                },
-                .backgroundColor = COLOR_BACKGROUND,
-                }) {
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+        }) {
             // render each text element
             for (int i = 0; i < g_current_line.count; ++i) {
                 CLAY_TEXT(g_current_line.elements[i].string, g_current_line.elements[i].config);
@@ -523,10 +616,10 @@ static void render_text_node(MarkdownNode* node, float available_width) {
             config = &g_font_inline_code;
             break;
         case MD_SPAN_A:
-                /*MD_ATTRIBUTE href;*/
-                /*MD_ATTRIBUTE title;*/
-                /*int is_autolink;            [> nonzero if this is an autolink <]*/
-                /*MD_SPAN_A_DETAIL;*/
+        /*MD_ATTRIBUTE href;*/
+        /*MD_ATTRIBUTE title;*/
+        /*int is_autolink;            [> nonzero if this is an autolink <]*/
+        /*MD_SPAN_A_DETAIL;*/
         default:
             return;
         }
@@ -652,7 +745,10 @@ static void render_ordered_list(MarkdownNode* current_node, float available_widt
         return;
     }
 
+    // List starting index
     int previous_index = list_item_index;
+    MD_BLOCK_OL_DETAIL* detail = (MD_BLOCK_OL_DETAIL*) current_node->value.block.detail;
+    list_item_index = detail->start + 1;
 
     const float padding_top = 8;
     const float padding_right = 0;
@@ -739,7 +835,7 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
                 .layout = {
                     .padding = { 8, 8, 4, 4 },
                 },
-                .backgroundColor = COLOR_ORANGE
+                .backgroundColor = COLOR_BLUE
             }) {
                 char index[4];
                 int len = sprintf(index, "%d", list_item_index);
@@ -761,6 +857,53 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
                 render_node(child, text_available_width);
             }
             textline_flush();
+        }
+    }
+}
+
+static void render_image(MarkdownNode *node, float available_width) {
+    MD_SPAN_IMG_DETAIL *detail = (MD_SPAN_IMG_DETAIL*) node->value.span.detail;
+    MD_ATTRIBUTE src = detail->src;
+    MD_ATTRIBUTE title = detail->src;
+
+    ImageInfo *info = find_or_load_image(src.text, src.size);
+
+    float content_width = available_width * IMG_SCALING_FACTOR;
+
+    // Display the image
+    if (info->is_image_loaded) {
+        CLAY_AUTO_ID({
+            .layout = {
+                .childAlignment = CLAY_ALIGN_X_CENTER,
+                .sizing = { .width = CLAY_SIZING_FIXED(content_width) },
+                .padding = {32, 32, 32, 32},
+            },
+        }) {
+            float max_width = content_width;
+            float original_width = (float)info->image.width;
+            float original_height = (float)info->image.height;
+
+            // Scale the image if too big, if not, then keep the original size
+            float width = (original_width > max_width) ? max_width : original_width;
+            width = width - 32; // Apply the containers padding to the image
+
+            // Scale height to keep the image ratio
+            float height = original_height * (width / original_width);
+
+            CLAY_AUTO_ID({
+                .layout = {
+                    .sizing = { .width = CLAY_SIZING_FIXED(width), .height = CLAY_SIZING_FIXED(height) }
+                },
+                .image = { .imageData = &info->image }
+            }) { }
+        }
+    } else {
+        CLAY_AUTO_ID({
+                .layout = {
+                .padding = {32,32,32,32}, 
+                }
+                }) {
+            CLAY_TEXT(CLAY_STRING("🖼 Image not loaded"), &g_font_body_bold);
         }
     }
 }
@@ -788,7 +931,7 @@ static void render_block(MarkdownNode* current_node, float available_width) {
             textline_init();
             for (MarkdownNode* child = current_node->first_child; child;
                     child = child->next_sibling) {
-                render_text_node(child, content_width);
+                render_node(child, content_width);
             }
             textline_flush();
             break;
@@ -811,7 +954,7 @@ static void render_block(MarkdownNode* current_node, float available_width) {
 
         case MD_BLOCK_UL:
             // Flush father elements after rendering inner lists if present.
-            textline_flush(); 
+            textline_flush();
             g_current_list_mode = LIST_MODE_UNORDERED;
             render_unordered_list(current_node, content_width);
             break;
@@ -835,13 +978,12 @@ static void render_block(MarkdownNode* current_node, float available_width) {
 }
 
 static void render_node(MarkdownNode* current_node, float available_width) {
-    switch (current_node->type) {
-    case NODE_BLOCK:
+    NodeType type = current_node->type;
+    if (type == NODE_BLOCK) {
         render_block(current_node, available_width);
-        break;
-
-    case NODE_TEXT:
-    case NODE_SPAN:
+    } else if (type == NODE_SPAN && current_node->value.span.type == MD_SPAN_IMG) {
+        render_image(current_node, available_width);
+    } else if (type == NODE_SPAN || type == NODE_TEXT) {
         CLAY_AUTO_ID({
             .layout = {
                 .layoutDirection = CLAY_TOP_TO_BOTTOM,
@@ -849,7 +991,6 @@ static void render_node(MarkdownNode* current_node, float available_width) {
         }) {
             render_text_node(current_node, available_width);
         }
-        break;
     }
 }
 
@@ -974,8 +1115,10 @@ static void handle_vim_scroll_motions(void) {
     if (fabsf(smoothed_scroll.x) > 0.01f || fabsf(smoothed_scroll.y) > 0.01f) {
         Clay_UpdateScrollContainers(
             true,
-            (Clay_Vector2){smoothed_scroll.x, smoothed_scroll.y},
-            delta_time
+        (Clay_Vector2) {
+            smoothed_scroll.x, smoothed_scroll.y
+        },
+        delta_time
         );
     }
 }
@@ -1085,6 +1228,7 @@ void cleanup_application(void) {
         free(g_temp_text_buffers);
         g_temp_text_buffers = NULL;
     }
+    clean_images_array();
 }
 
 void initialize_application(void) {
