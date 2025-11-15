@@ -100,7 +100,11 @@ static Clay_TextElementConfig g_font_h4;
 static Clay_TextElementConfig g_font_h5;
 static Clay_TextElementConfig g_font_inline_code;
 
-// Text rendering system
+// --- Text rendering system ---
+
+// Represents the amount of chars that can be displayed inside a single line of text with the
+// current screen size. It is calculated on every loop cicle using the screen size and the font
+// size.
 static int g_available_characters = 0;
 
 #define MAX_TEXT_ELEMENTS 256
@@ -287,25 +291,16 @@ static void textline_flush() {
 
     // Line container
     CLAY_AUTO_ID({
-        .layout = {
-            .layoutDirection = CLAY_TOP_TO_BOTTOM,
+            .layout = {
+            .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .childGap = 0,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-        },
-        .backgroundColor = COLOR_BACKGROUND,
-    }) {
-        CLAY_AUTO_ID({
-            .layout = {
-                .layoutDirection = CLAY_LEFT_TO_RIGHT,
-                .childGap = 0,
-                .sizing = { .width = CLAY_SIZING_GROW(0) }
             },
             .backgroundColor = COLOR_BACKGROUND,
-        }) {
-            // render each text element
-            for (int i = 0; i < g_current_line.count; ++i) {
-                CLAY_TEXT(g_current_line.elements[i].string, g_current_line.elements[i].config);
-            }
+            }) {
+        // render each text element
+        for (int i = 0; i < g_current_line.count; ++i) {
+            CLAY_TEXT(g_current_line.elements[i].string, g_current_line.elements[i].config);
         }
     }
 
@@ -323,11 +318,13 @@ static void textline_push(const char* source, int length,
         textline_flush();
     }
 
+    int remaining = g_available_characters - g_current_line.char_count;
+
     // Check if adding this text exceeds max characters allowed
     if (g_current_line.char_count + length > g_available_characters) {
         // Find last space within the allowed range to wrap
         int wrap_pos = -1;
-        int max_len = g_available_characters - g_current_line.char_count;
+        int max_len = remaining;
         for (int i = max_len; i > 0; i--) {
             if (source[i-1] == ' ') {
                 wrap_pos = i;
@@ -335,7 +332,15 @@ static void textline_push(const char* source, int length,
             }
         }
 
-        // If no space found, just break at max_len
+        // If there is no space and before wrapping in the middle of a word, try placing the
+        // entire chunk on a new line (only works if it fits in an empty line).
+        if (wrap_pos == -1 && length <= g_available_characters) {
+            textline_flush();
+            textline_push(source, length, config);
+            return;
+        }
+
+        // If no space found and it cannot be place onto a new line, just break at max_len
         if (wrap_pos == -1) {
             wrap_pos = max_len;
         }
@@ -876,7 +881,7 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
                 list_item_index++;
             }
         } else {
-            CLAY_TEXT(CLAY_STRING("‣ "), &g_font_body_bold);
+            CLAY_TEXT(CLAY_STRING("‣"), &g_font_body_bold);
         }
 
         CLAY_AUTO_ID({
@@ -941,73 +946,76 @@ static void render_image(MarkdownNode *node, float available_width) {
     }
 }
 
-static void render_block(MarkdownNode* current_node, float available_width) {
+static void render_paragraph(MarkdownNode* current_node, float available_width) {
     const float padding = 1;
     const float child_gap = 2;
     const float total_spacing = padding * 2 + child_gap;
 
     CLAY_AUTO_ID({
-        .layout = {
+            .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .padding = {padding, padding, padding, padding},
             .childGap = child_gap,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-        },
-        .backgroundColor = COLOR_BACKGROUND,
-    }) {
-        ListMode previous_list_mode = g_current_list_mode;
+            },
+            .backgroundColor = COLOR_BACKGROUND,
+            }) {
+        textline_init();
+        for (MarkdownNode* child = current_node->first_child; child;
+                child = child->next_sibling) {
+            render_node(child, available_width);
+        }
+        textline_flush();
+    }
+}
 
-        float content_width = available_width - total_spacing;
+static void render_block(MarkdownNode* current_node, float available_width) {
+    ListMode previous_list_mode = g_current_list_mode;
 
-        switch (current_node->value.block.type) {
+    switch (current_node->value.block.type) {
         case MD_BLOCK_P:
-            textline_init();
-            for (MarkdownNode* child = current_node->first_child; child;
-                    child = child->next_sibling) {
-                render_node(child, content_width);
-            }
-            textline_flush();
+            render_paragraph(current_node, available_width);
             break;
 
         case MD_BLOCK_H:
-            render_heading(current_node, content_width);
+            render_heading(current_node, available_width);
             break;
 
         case MD_BLOCK_HR:
-            render_horizontal_rule(content_width);
+            render_horizontal_rule(available_width);
             break;
 
         case MD_BLOCK_CODE:
-            render_code_block(current_node, content_width);
+            render_code_block(current_node, available_width);
             break;
 
         case MD_BLOCK_QUOTE:
-            render_quote_block(current_node, content_width);
+            render_quote_block(current_node, available_width);
             break;
 
         case MD_BLOCK_UL:
             // Flush father elements after rendering inner lists if present.
             textline_flush();
             g_current_list_mode = LIST_MODE_UNORDERED;
-            render_unordered_list(current_node, content_width);
+            render_unordered_list(current_node, available_width);
             break;
 
         case MD_BLOCK_OL:
             g_current_list_mode = LIST_MODE_ORDERED;
             textline_flush();
-            render_ordered_list(current_node, content_width);
+            render_ordered_list(current_node, available_width);
             break;
 
         case MD_BLOCK_LI:
-            render_list_item(current_node, content_width);
+            render_list_item(current_node, available_width);
             break;
 
         default:
+            // Just ignore the node
             break;
-        }
-
-        g_current_list_mode = previous_list_mode;
     }
+
+    g_current_list_mode = previous_list_mode;
 }
 
 static void render_node(MarkdownNode* current_node, float available_width) {
@@ -1017,13 +1025,7 @@ static void render_node(MarkdownNode* current_node, float available_width) {
     } else if (type == NODE_SPAN && current_node->value.span.type == MD_SPAN_IMG) {
         render_image(current_node, available_width);
     } else if (type == NODE_SPAN || type == NODE_TEXT) {
-        CLAY_AUTO_ID({
-            .layout = {
-                .layoutDirection = CLAY_TOP_TO_BOTTOM,
-            },
-        }) {
-            render_text_node(current_node, available_width);
-        }
+        render_text_node(current_node, available_width);
     }
 }
 
@@ -1046,7 +1048,7 @@ static Clay_RenderCommandArray render_markdown_tree(void) {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .padding = { left_padding, 0, 46, right_padding },
             .childGap = 16,
-            .childAlignment = { .x = CLAY_ALIGN_X_CENTER },
+            .childAlignment = { .x = CLAY_ALIGN_X_LEFT },
             .sizing = {
                 .width = CLAY_SIZING_GROW(0),
                 .height = CLAY_SIZING_GROW(0)
