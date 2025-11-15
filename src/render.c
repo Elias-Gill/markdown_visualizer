@@ -14,8 +14,12 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 
-#include <unistd.h>
 #include <stdbool.h>
+#include <libgen.h>
+#include <limits.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATION
@@ -72,6 +76,8 @@ typedef enum {
 // ============================================================================
 // GLOBAL VARIABLES
 // ============================================================================
+
+static char g_resource_path[PATH_MAX];
 
 #define BASE_FONT_SIZE 22
 #define FONT_SCALE_FACTOR 2
@@ -134,6 +140,15 @@ int images_array_pointer = -1;
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
+
+// --- RESOURCES INITIALIZATION ---
+
+void init_resource_path(const char *app_root) {
+    char exe_path[PATH_MAX];
+    realpath(app_root, exe_path);
+    char *dir = dirname(exe_path);
+    snprintf(g_resource_path, sizeof(g_resource_path), "%s/resources", dir);
+}
 
 // --- TEXT MANIPULATION FUNCTIONS ---
 
@@ -529,14 +544,24 @@ static void load_standard_font(int font_id, const char* font_path) {
                           sizeof(special_codepoints) / sizeof(special_codepoints[0]));
 }
 
+
 static void load_fonts(void) {
-    load_standard_font(FONT_ID_REGULAR, "resources/NotoSans-Regular.ttf");
-    load_standard_font(FONT_ID_ITALIC, "resources/NotoSans-Italic.ttf");
-    load_standard_font(FONT_ID_SEMIBOLD, "resources/NotoSans-SemiBold.ttf");
-    load_standard_font(FONT_ID_SEMIBOLD_ITALIC, "resources/NotoSans-SemiBoldItalic.ttf");
-    load_standard_font(FONT_ID_BOLD, "resources/NotoSans-Bold.ttf");
-    load_standard_font(FONT_ID_EXTRABOLD, "resources/NotoSans-ExtraBold.ttf");
-    load_emoji_font(FONT_ID_EMOJI, "resources/NotoEmoji-Regular.ttf");
+    char path[PATH_MAX];
+
+    snprintf(path, sizeof(path), "%s/NotoSans-Regular.ttf", g_resource_path);
+    load_standard_font(FONT_ID_REGULAR, path);
+    snprintf(path, sizeof(path), "%s/NotoSans-Italic.ttf", g_resource_path);
+    load_standard_font(FONT_ID_ITALIC, path);
+    snprintf(path, sizeof(path), "%s/NotoSans-SemiBold.ttf", g_resource_path);
+    load_standard_font(FONT_ID_SEMIBOLD, path);
+    snprintf(path, sizeof(path), "%s/NotoSans-SemiBoldItalic.ttf", g_resource_path);
+    load_standard_font(FONT_ID_SEMIBOLD_ITALIC, path);
+    snprintf(path, sizeof(path), "%s/NotoSans-Bold.ttf", g_resource_path);
+    load_standard_font(FONT_ID_BOLD, path);
+    snprintf(path, sizeof(path), "%s/NotoSans-ExtraBold.ttf", g_resource_path);
+    load_standard_font(FONT_ID_EXTRABOLD, path);
+    snprintf(path, sizeof(path), "%s/NotoEmoji-Regular.ttf", g_resource_path);
+    load_emoji_font(FONT_ID_EMOJI, path);
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
     reset_font_styles();
@@ -1238,7 +1263,8 @@ void cleanup_application(void) {
     clean_images_array();
 }
 
-void initialize_application(void) {
+void initialize_application(char *app_root) {
+    init_resource_path(app_root);
     initialize_clay();
     start_main_loop();
     cleanup_application();

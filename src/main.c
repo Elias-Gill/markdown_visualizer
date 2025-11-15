@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Initialize and run the renderer
-    initialize_application();
+    initialize_application(argv[0]);
 
     // Cleanup
     free(file_content);
