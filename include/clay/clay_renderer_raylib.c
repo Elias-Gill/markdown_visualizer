@@ -170,8 +170,6 @@ void Clay_Raylib_Initialize(int width, int height, const char *title,
                             unsigned int flags) {
     SetConfigFlags(flags);
     InitWindow(width, height, title);
-
-    // Configurar para soportar UTF-8
     SetExitKey(0); // Deshabilitar tecla de salida por defecto
 }
 
