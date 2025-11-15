@@ -8,10 +8,10 @@
 
 Contrary to popular **belief**, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, *consectetur*, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of *De Finibus Bonorum et Malorum* (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
 
-This is a larger paragraph but with soft breaks: The standard chunk of Lorem Ipsum  
-used since the 1500s is reproduced below for those interested. Sections 1.10.32  
-and 1.10.33 from *De Finibus Bonorum et Malorum* by Cicero are also reproduced  
-in their exact original form, accompanied by English versions from the 1914  
+This is a larger paragraph but with soft breaks: The standard chunk of Lorem Ipsum
+used since the 1500s is reproduced below for those interested. Sections 1.10.32 
+and 1.10.33 from *De Finibus Bonorum et Malorum* by Cicero are also reproduced
+in their exact original form, accompanied by English versions from the 1914
 translation by H. Rackham.
 
 This does not have to be, but what’s next to it **is STRONG WITH COLOR**. This should be glued: Things unrelated
@@ -106,17 +106,15 @@ watching the sun set behind the mountains. "What day is it today?",
 he asked curiously, not noticing the clock was already quarter past eight.
 In the distance, a song said: What a joy to come home after so long! — and at that instant — everything seemed to stop: the air, the light, and even the murmur of the river.
 
+1. Spanish: ¡Hola! ¿Cómo estás? Ñandu atí.
+2. French: Bonjour! Ça va?
+3. German: Grüß Gott!
+
 ---
 
 ## Emojis test
 
 Hello World! 🌍
-
-UTF-8 characters and emojis:
-
-1. Spanish: ¡Hola! ¿Cómo estás?
-2. French: Bonjour! Ça va?
-3. German: Grüß Gott!
 
 Common emojis:
 😀 😃 😄 😁 😆 😅 🤣 😂 🙃 😉 😊 😇 🥰 😍 🤩 😘 😗 ☺️  😚 😙 🥲 😋 😛 😜 🤪 😝 🤑 🤗
@@ -154,7 +152,31 @@ Food emojis:
 
 ## Image example
 
-![A cute kitten](https://placekitten.com/400/200)
+This is a larger paragraph but with soft breaks: The standard chunk of Lorem Ipsum  
+used since the 1500s is reproduced below for those interested. Sections 1.10.32  
+and 1.10.33 from *De Finibus Bonorum et Malorum* by Cicero are also reproduced  
+in their exact original form, accompanied by English versions from the 1914  
+translation by H. Rackham.
+
+![A cute kitten](/home/elias/Imágenes/fondos/ascii-minimalist/Firewatch-night.jpg)
+
+This is a larger paragraph but with soft breaks: The standard chunk of Lorem Ipsum  
+used since the 1500s is reproduced below for those interested. Sections 1.10.32  
+and 1.10.33 from *De Finibus Bonorum et Malorum* by Cicero are also reproduced  
+in their exact original form, accompanied by English versions from the 1914  
+translation by H. Rackham.
+
+![A cute kitten](no_se_puede_cargar)
+
+This is a larger paragraph but with soft breaks: The standard chunk of Lorem Ipsum  
+used since the 1500s is reproduced below for those interested. Sections 1.10.32  
+and 1.10.33 from *De Finibus Bonorum et Malorum* by Cicero are also reproduced  
+in their exact original form, accompanied by English versions from the 1914  
+translation by H. Rackham.
+
+![cool_retro lights](/home/elias/Imágenes/fondos/cyberpunk_neon/cool_lights.jpg)
+
+![Microso](/home/elias/Imágenes/fondos/brands_logos/Logo-microsoft.jpg)
 
 ---
 

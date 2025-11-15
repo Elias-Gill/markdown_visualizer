@@ -2,6 +2,7 @@
 build/
 ctags
 tags
+.cache/
 
 # Directorios de build generados por CMake
 out/
