@@ -31,3 +31,11 @@ directory along with the copied `resources` folder.
 ## Notes
 
 This project has been tested just for Linux. Building on Windows or macOS has not been validated.
+
+## Keybinds
+
+It supports basic vim motions:
+
+- j, k, h, l (Down, Up, Left, Right)
+- g and G (go-to-Top, go-to-Bottom)
+- d and D (half-page-Down, half-page-Up)

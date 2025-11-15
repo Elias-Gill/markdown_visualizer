@@ -291,13 +291,13 @@ static void textline_flush() {
 
     // Line container
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_LEFT_TO_RIGHT,
             .childGap = 0,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-            }) {
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+    }) {
         // render each text element
         for (int i = 0; i < g_current_line.count; ++i) {
             CLAY_TEXT(g_current_line.elements[i].string, g_current_line.elements[i].config);
@@ -693,8 +693,8 @@ static void render_heading(MarkdownNode* node, float available_width) {
         break;
     }
 
-    float content_width = available_width *
-                          0.95; // adds a little dinamyc padding to the right
+    // This adds a little dinamyc padding to the right
+    float content_width = available_width * 0.95;
     CLAY_AUTO_ID({
         .layout = {
             .sizing = { .width = CLAY_SIZING_GROW(0, content_width) }
@@ -952,14 +952,14 @@ static void render_paragraph(MarkdownNode* current_node, float available_width) 
     const float total_spacing = padding * 2 + child_gap;
 
     CLAY_AUTO_ID({
-            .layout = {
+        .layout = {
             .layoutDirection = CLAY_TOP_TO_BOTTOM,
             .padding = {padding, padding, padding, padding},
             .childGap = child_gap,
             .sizing = { .width = CLAY_SIZING_GROW(0) }
-            },
-            .backgroundColor = COLOR_BACKGROUND,
-            }) {
+        },
+        .backgroundColor = COLOR_BACKGROUND,
+    }) {
         textline_init();
         for (MarkdownNode* child = current_node->first_child; child;
                 child = child->next_sibling) {
@@ -973,46 +973,46 @@ static void render_block(MarkdownNode* current_node, float available_width) {
     ListMode previous_list_mode = g_current_list_mode;
 
     switch (current_node->value.block.type) {
-        case MD_BLOCK_P:
-            render_paragraph(current_node, available_width);
-            break;
+    case MD_BLOCK_P:
+        render_paragraph(current_node, available_width);
+        break;
 
-        case MD_BLOCK_H:
-            render_heading(current_node, available_width);
-            break;
+    case MD_BLOCK_H:
+        render_heading(current_node, available_width);
+        break;
 
-        case MD_BLOCK_HR:
-            render_horizontal_rule(available_width);
-            break;
+    case MD_BLOCK_HR:
+        render_horizontal_rule(available_width);
+        break;
 
-        case MD_BLOCK_CODE:
-            render_code_block(current_node, available_width);
-            break;
+    case MD_BLOCK_CODE:
+        render_code_block(current_node, available_width);
+        break;
 
-        case MD_BLOCK_QUOTE:
-            render_quote_block(current_node, available_width);
-            break;
+    case MD_BLOCK_QUOTE:
+        render_quote_block(current_node, available_width);
+        break;
 
-        case MD_BLOCK_UL:
-            // Flush father elements after rendering inner lists if present.
-            textline_flush();
-            g_current_list_mode = LIST_MODE_UNORDERED;
-            render_unordered_list(current_node, available_width);
-            break;
+    case MD_BLOCK_UL:
+        // Flush father elements after rendering inner lists if present.
+        textline_flush();
+        g_current_list_mode = LIST_MODE_UNORDERED;
+        render_unordered_list(current_node, available_width);
+        break;
 
-        case MD_BLOCK_OL:
-            g_current_list_mode = LIST_MODE_ORDERED;
-            textline_flush();
-            render_ordered_list(current_node, available_width);
-            break;
+    case MD_BLOCK_OL:
+        g_current_list_mode = LIST_MODE_ORDERED;
+        textline_flush();
+        render_ordered_list(current_node, available_width);
+        break;
 
-        case MD_BLOCK_LI:
-            render_list_item(current_node, available_width);
-            break;
+    case MD_BLOCK_LI:
+        render_list_item(current_node, available_width);
+        break;
 
-        default:
-            // Just ignore the node
-            break;
+    default:
+        // Just ignore the node
+        break;
     }
 
     g_current_list_mode = previous_list_mode;
