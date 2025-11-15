@@ -3,7 +3,7 @@
 A small markdown visualizer written in C.
 Renders markdown files using **Raylib**, **Clay**, and **MD4C**.
 
-<img width="902" height="805" alt="image" src="https://github.com/user-attachments/assets/8a3f8153-3533-431f-b353-56c75761c53c" />
+<img width="1317" height="1078" alt="image" src="https://github.com/user-attachments/assets/12b608cb-f30f-4750-a1bb-c90aab408cdb" />
 
 ## Requirements
 
