@@ -86,6 +86,10 @@ static bool g_debug_enabled = true;
 static int g_base_font_size = BASE_FONT_SIZE;
 static ListMode g_current_list_mode = LIST_MODE_ORDERED;
 
+// -- Fonts and text ---
+
+static FT_Library g_freetype_lib = NULL;
+
 // Fonts
 static Font g_fonts[FONT_COUNT];
 
@@ -268,7 +272,7 @@ void clean_images_array() {
     if (images_array_pointer < 0) {
         return;
     }
-    for (int i = 0; i < images_array_pointer; i++) {
+    for (int i = 0; i <= images_array_pointer; i++) {
         ImageInfo info = images[i];
         if (info.is_image_loaded && info.image.id > 0) {
             UnloadTexture(info.image);
@@ -447,22 +451,17 @@ static void reset_font_styles(void) {
     };
 }
 
-
 static void load_font_with_ranges(int font_id, const char* font_path,
                                   const CodepointRange* ranges,
                                   int range_count,
                                   const int* additional_codepoints,
                                   int additional_count) {
-    FT_Library freetype_lib;
     FT_Face face;
-
-    FT_Init_FreeType(&freetype_lib);
-    FT_New_Face(freetype_lib, font_path, 0, &face);
+    FT_New_Face(g_freetype_lib, font_path, 0, &face);
 
     int pixel_size = g_base_font_size * FONT_SCALE_FACTOR;
     FT_Set_Pixel_Sizes(face, 0, pixel_size);
 
-    // Calculate total capacity needed
     int max_codepoint_count = 0;
     for (int i = 0; i < range_count; i++) {
         max_codepoint_count += (ranges[i].end - ranges[i].start + 1);
@@ -472,7 +471,6 @@ static void load_font_with_ranges(int font_id, const char* font_path,
     int* codepoints = malloc(sizeof(int) * max_codepoint_count);
     int valid_count = 0;
 
-    // Add codepoints from ranges
     for (int i = 0; i < range_count; i++) {
         for (int codepoint = ranges[i].start; codepoint <= ranges[i].end; codepoint++) {
             if (FT_Get_Char_Index(face, codepoint)) {
@@ -481,11 +479,9 @@ static void load_font_with_ranges(int font_id, const char* font_path,
         }
     }
 
-    // Add additional codepoints
     for (int i = 0; i < additional_count; i++) {
         int codepoint = additional_codepoints[i];
         if (FT_Get_Char_Index(face, codepoint)) {
-            // Check for duplicates
             int is_duplicate = 0;
             for (int j = 0; j < valid_count; j++) {
                 if (codepoints[j] == codepoint) {
@@ -504,7 +500,6 @@ static void load_font_with_ranges(int font_id, const char* font_path,
 
     free(codepoints);
     FT_Done_Face(face);
-    FT_Done_FreeType(freetype_lib);
 
     SetTextureFilter(g_fonts[font_id].texture, TEXTURE_FILTER_BILINEAR);
 }
@@ -575,6 +570,19 @@ static void load_fonts(void) {
 
     Clay_SetMeasureTextFunction(Raylib_MeasureText, g_fonts);
     reset_font_styles();
+}
+
+static void cleanup_freetype(void) {
+    if (g_freetype_lib) {
+        FT_Done_FreeType(g_freetype_lib);
+        g_freetype_lib = NULL;
+    }
+}
+
+static void initialize_freetype(void) {
+    if (!g_freetype_lib) {
+        FT_Init_FreeType(&g_freetype_lib);
+    }
 }
 
 // ============================================================================
@@ -650,10 +658,8 @@ static void render_text_node(MarkdownNode* node, float available_width) {
             config = &g_font_inline_code;
             break;
         case MD_SPAN_A:
-        /*MD_ATTRIBUTE href;*/
-        /*MD_ATTRIBUTE title;*/
-        /*int is_autolink;            [> nonzero if this is an autolink <]*/
-        /*MD_SPAN_A_DETAIL;*/
+            // TODO: continue
+            break;
         default:
             return;
         }
@@ -1283,9 +1289,16 @@ void cleanup_application(void) {
 }
 
 void initialize_application(char *app_root) {
+    // Resources initialization
     init_resource_path(app_root);
+    initialize_freetype();
     initialize_clay();
+
     start_main_loop();
+
+    // Cleanup
     cleanup_application();
+    cleanup_freetype();
+
     CloseWindow();
 }
