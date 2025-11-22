@@ -128,7 +128,7 @@ static char** g_temp_text_buffers = NULL;
 static int g_temp_text_count = 0;
 static int g_temp_text_capacity = 0;
 
-// Images storage
+// ---- Images storage -----
 typedef struct {
     char *path;
     unsigned path_size;
@@ -140,6 +140,11 @@ typedef struct {
 // I mean, more than 200 images inside a markdown file is just absurd man.
 ImageInfo images[256];
 int images_array_pointer = -1;
+
+// ---- List rendering -----
+
+int g_list_item_indexes[10] = {0};
+int g_current_depth = 0;
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -609,7 +614,7 @@ static void initialize_clay(void) {
     }
     );
 
-    Clay_Raylib_Initialize(1024, 768, "Markdown Viewer", FLAG_WINDOW_RESIZABLE);
+    Clay_Raylib_Initialize(768, 528, "Markdown Viewer", FLAG_WINDOW_RESIZABLE);
     load_fonts();
 }
 
@@ -776,17 +781,19 @@ static void render_quote_block(MarkdownNode* node, float available_width) {
     }
 }
 
-int list_item_index = 1;
-
 static void render_ordered_list(MarkdownNode* current_node, float available_width) {
     if (!current_node->first_child) {
         return;
     }
 
     // List starting index
-    int previous_index = list_item_index;
+    int previous_depth = g_current_depth;
+    int previous_indices[10];
+    memcpy(previous_indices, g_list_item_indexes, sizeof(g_list_item_indexes));
+
     MD_BLOCK_OL_DETAIL* detail = (MD_BLOCK_OL_DETAIL*) current_node->value.block.detail;
-    list_item_index = detail->start;
+    g_current_depth++;
+    g_list_item_indexes[g_current_depth - 1] = detail->start;
 
     const float padding_top = 8;
     const float padding_right = 0;
@@ -814,7 +821,8 @@ static void render_ordered_list(MarkdownNode* current_node, float available_widt
     }
 
     // Reset to the previous index
-    list_item_index = previous_index;
+    memcpy(g_list_item_indexes, previous_indices, sizeof(g_list_item_indexes));
+    g_current_depth = previous_depth;
 }
 
 static void render_unordered_list(MarkdownNode* current_node, float available_width) {
@@ -875,10 +883,14 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
                 },
                 .backgroundColor = COLOR_BLUE
             }) {
-                char index[4];
-                int len = sprintf(index, "%d", list_item_index);
-                CLAY_TEXT(make_clay_string_copy(index, len), &g_font_body_bold);
-                list_item_index++;
+                // Construct the list item index
+                char index_str[64] = "";
+                for (int i = 0; i < g_current_depth; i++) {
+                    char buf[8];
+                    sprintf(buf, "%d.", g_list_item_indexes[i]);
+                    strcat(index_str, buf);
+                }
+                CLAY_TEXT(make_clay_string_copy(index_str, strlen(index_str)), &g_font_body_bold);
             }
         } else {
             CLAY_TEXT(CLAY_STRING("‣"), &g_font_body_bold);
@@ -890,12 +902,15 @@ static void render_list_item(MarkdownNode* current_node, float available_width) 
                 .sizing = { .width = CLAY_SIZING_FIT(0, available_width) },
             },
         }) {
-            for (MarkdownNode* child = current_node->first_child; child;
-                    child = child->next_sibling) {
+            for (MarkdownNode* child = current_node->first_child; child; child = child->next_sibling) {
                 render_node(child, text_available_width);
             }
             textline_flush();
         }
+    }
+
+    if (g_current_list_mode == LIST_MODE_ORDERED) {
+        g_list_item_indexes[g_current_depth - 1]++;
     }
 }
 
@@ -1086,12 +1101,14 @@ typedef struct {
 } ScrollKey;
 
 static ScrollKey g_scroll_keys[] = {
-    {.key = KEY_J, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // small step down
-    {.key = KEY_K, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // small step up
-    {.key = KEY_H, .direction = {1,  0}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // left
-    {.key = KEY_L, .direction = {-1, 0}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // right
-    {.key = KEY_D, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.095f},  // half page down
-    {.key = KEY_U, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.095f},  // half page up
+    {.key = KEY_J, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},    // small step down
+    {.key = KEY_K, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},    // small step up
+    {.key = KEY_DOWN, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.03f}, // small step down
+    {.key = KEY_UP, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.03f},   // small step up
+    {.key = KEY_H, .direction = {1,  0}, .timer = 0, .repeating = false, .screen_portion = 0.03f},    // left
+    {.key = KEY_L, .direction = {-1, 0}, .timer = 0, .repeating = false, .screen_portion = 0.03f},    // right
+    {.key = KEY_D, .direction = {0, -1}, .timer = 0, .repeating = false, .screen_portion = 0.095f},   // half page down
+    {.key = KEY_U, .direction = {0,  1}, .timer = 0, .repeating = false, .screen_portion = 0.095f},   // half page up
 };
 
 static void handle_vim_scroll_motions(void) {

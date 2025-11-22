@@ -38,4 +38,4 @@ It supports basic vim motions:
 
 - j, k, h, l (Down, Up, Left, Right)
 - g and G (go-to-Top, go-to-Bottom)
-- d and D (half-page-Down, half-page-Up)
+- d and u (half-page-Down, half-page-Up)
