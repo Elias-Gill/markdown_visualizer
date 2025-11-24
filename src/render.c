@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 // ============================================================================
 // CONSTANTS AND CONFIGURATION
@@ -133,10 +134,21 @@ static int g_temp_text_count = 0;
 static int g_temp_text_capacity = 0;
 
 // ---- Images storage -----
+
+/*
+ * ASYNC IMAGE LOADING EXPLANATION: 
+ * - Thread loads ONLY Image (RAM pixels) using LoadImage()
+ * - Stores it in pending_image and sets has_pending_image = true 
+ * - Main thread (in update_pending_textures()) detects has_pending_image, 
+ *   calls LoadTextureFromImage(). ONLY here we touch OpenGL 
+ * - After upload, unloads the RAM Image and clears the flag
+ */
 typedef struct {
     char *path;
     unsigned path_size;
     bool is_image_loaded;
+    bool has_pending_image;    // true when LoadImage() finished and Image is ready for GPU upload
+    Image pending_image;       // loaded in worker thread (pixels in RAM only)
     Texture2D image;
 } ImageInfo;
 
@@ -213,6 +225,32 @@ static void free_all_temp_text_buffers(void) {
 
 // --- IMAGE LOADING FUNCTIONS ---
 
+void* load_image_async(void *args) {
+    int index = *(int*)args;
+    free(args);
+
+    Image image = {0};
+    bool is_image_loaded = false;
+
+    if (access(images[index].path, F_OK) == 0) {
+        image = LoadImage(images[index].path);
+        if (image.data) {
+            printf("Loaded image: '%.*s'\n", images[index].path_size, images[index].path);
+            is_image_loaded = true;
+        } else {
+            printf("Cannot load image (LoadImage failed): '%.*s'\n", images[index].path_size, images[index].path);
+        }
+    } else {
+        printf("Cannot load image: '%.*s'\n", images[index].path_size, images[index].path);
+    }
+
+    images[index].pending_image = image;
+    images[index].has_pending_image = true;
+    images[index].is_image_loaded = is_image_loaded;
+
+    return NULL;
+}
+
 // Search for an image inside the images array, if not found, then loads it and returns the
 // pointer to that element.
 ImageInfo* find_or_load_image(const char *raw_path, unsigned path_size) {
@@ -239,32 +277,49 @@ ImageInfo* find_or_load_image(const char *raw_path, unsigned path_size) {
         exit(1);
     }
 
-    // Duplicate the path string to store it
+    // Path string duplicate
     char *stored_path = strdup(path);
     if (!stored_path) {
         perror("Error duplicating image path str: strdup");
         exit(1);
     }
 
-    Texture2D image;
-
-    bool is_image_loaded = true;
-    if (access(path, F_OK) == 0) {
-        image = LoadTexture(path);
-        printf("Loaded image: '%.*s'\n", path_size, path);
-    } else {
-        printf("Cannot load image: '%.*s'\n", path_size, path);
-        is_image_loaded = false;
-    }
-
+    // Mark the image as not loaded, then tries to load it inside a new thread
     images[images_array_pointer] = (ImageInfo) {
-        .image = image,
         .path = stored_path,
         .path_size = path_size,
-        .is_image_loaded = is_image_loaded
+        .is_image_loaded = false,
+        .has_pending_image = false,
+        .pending_image = {0},
+        .image = {0}
     };
 
+    int *idx = malloc(sizeof(int));
+    *idx = images_array_pointer;
+    pthread_t thread_id;
+    int ret_val = pthread_create(&thread_id, NULL, load_image_async, idx);
+    if (ret_val != 0) {
+        fprintf(stderr, "Error creating thread: %d\n", ret_val);
+        exit(1);
+    }
+
+    // Optional: detach so we don't leak threads
+    pthread_detach(thread_id);
+
     return &images[images_array_pointer];
+}
+
+void update_pending_textures(void) {
+    for (int i = 0; i <= images_array_pointer; i++) {
+        if (images[i].has_pending_image) {
+            if (images[i].is_image_loaded) {
+                images[i].image = LoadTextureFromImage(images[i].pending_image);
+                UnloadImage(images[i].pending_image);
+            }
+            images[i].pending_image = (Image){0};
+            images[i].has_pending_image = false;
+        }
+    }
 }
 
 // Cleans the images array, unloading textures and temporary path strings.
@@ -1242,6 +1297,8 @@ static void update_frame(void) {
     // Render frame
     BeginDrawing();
     ClearBackground(WHITE);
+
+    update_pending_textures(); // Load pending textures (images)
     Clay_Raylib_Render(render_commands, g_fonts, FONT_ID_EMOJI);
 
     // Clean up temporary text buffers
